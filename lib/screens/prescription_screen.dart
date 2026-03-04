@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/medicine_test_service.dart';
 
 class PrescriptionScreen extends StatefulWidget {
   final Map<String, dynamic> appointment;
@@ -32,49 +33,12 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
   bool _hasFollowUp = false;
   bool _isSaving = false;
   bool _prescriptionSaved = false;
+  bool _isLoadingMedicines = true;
+  bool _isLoadingTests = true;
 
-  // Common medicines list
-  final List<Map<String, String>> _commonMedicines = [
-    {'name': 'Paracetamol', 'dose': '500mg', 'timing': 'After meal'},
-    {'name': 'Amoxicillin', 'dose': '500mg', 'timing': 'After meal'},
-    {'name': 'Metformin', 'dose': '500mg', 'timing': 'Before meal'},
-    {'name': 'Omeprazole', 'dose': '20mg', 'timing': 'Before meal'},
-    {'name': 'Atenolol', 'dose': '50mg', 'timing': 'Morning'},
-    {'name': 'Azithromycin', 'dose': '500mg', 'timing': 'Once daily'},
-    {'name': 'Cetirizine', 'dose': '10mg', 'timing': 'At night'},
-    {'name': 'Amlodipine', 'dose': '5mg', 'timing': 'Morning'},
-    {'name': 'Metronidazole', 'dose': '400mg', 'timing': 'After meal'},
-    {'name': 'Ibuprofen', 'dose': '400mg', 'timing': 'After meal'},
-    {'name': 'Aspirin', 'dose': '75mg', 'timing': 'Morning'},
-    {'name': 'Losartan', 'dose': '50mg', 'timing': 'Morning'},
-    {'name': 'Pantoprazole', 'dose': '40mg', 'timing': 'Before meal'},
-    {'name': 'Cefuroxime', 'dose': '500mg', 'timing': 'Twice daily'},
-    {'name': 'Salbutamol', 'dose': '4mg', 'timing': 'As needed'},
-  ];
-
-  // Common tests list
-  final List<String> _commonTests = [
-    'Complete Blood Count (CBC)',
-    'Blood Glucose (Fasting)',
-    'Blood Glucose (Random)',
-    'HbA1c',
-    'Lipid Profile',
-    'Thyroid Function Test (TFT)',
-    'Liver Function Test (LFT)',
-    'Kidney Function Test (KFT)',
-    'Urine Routine Examination',
-    'ECG (Electrocardiogram)',
-    'Chest X-Ray',
-    'Echocardiography',
-    'Ultrasound Abdomen',
-    'Blood Pressure Monitoring',
-    'Serum Creatinine',
-    'Serum Electrolytes',
-    'SGPT / SGOT',
-    'Hemoglobin',
-    'COVID-19 PCR Test',
-    'Stool Routine Examination',
-  ];
+  // Dynamic lists fetched from API
+  List<Map<String, String>> _commonMedicines = [];
+  List<String> _commonTests = [];
 
   final List<String> _followUpDays = [
     '3 days', '5 days', '1 week', '2 weeks', '1 month', '2 months', '3 months',
@@ -84,6 +48,32 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
   void initState() {
     super.initState();
     _loadExistingPrescription();
+    _loadMedicinesAndTests();
+  }
+
+  /// Fetch medicines and tests from API
+  Future<void> _loadMedicinesAndTests() async {
+    try {
+      final medicines = await MedicineTestService.fetchMedicines();
+      final tests = await MedicineTestService.fetchTests();
+      
+      if (mounted) {
+        setState(() {
+          _commonMedicines = medicines;
+          _commonTests = tests;
+          _isLoadingMedicines = false;
+          _isLoadingTests = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading medicines and tests: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingMedicines = false;
+          _isLoadingTests = false;
+        });
+      }
+    }
   }
 
   @override
@@ -297,28 +287,57 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  DropdownButtonFormField<Map<String, String>>(
-                    decoration: InputDecoration(
-                      labelText: 'Add from common medicines',
-                      prefixIcon: Icon(Icons.medication, color: Colors.blue.shade600),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.blue.shade400, width: 2),
+                  if (_isLoadingMedicines)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.blue.shade600),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text('Loading medicines...',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              )),
+                        ],
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    )
+                  else
+                    DropdownButtonFormField<Map<String, String>>(
+                      decoration: InputDecoration(
+                        labelText: 'Add from common medicines',
+                        prefixIcon: Icon(Icons.medication, color: Colors.blue.shade600),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.blue.shade400, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      ),
+                      hint: const Text('Select medicine'),
+                      isExpanded: true,
+                      items: _commonMedicines.map((med) {
+                        return DropdownMenuItem<Map<String, String>>(
+                          value: med,
+                          child: Text(
+                            '${med['name']} ${med['dose']} — ${med['timing']}',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) _addMedicineFromDropdown(val);
+                      },
                     ),
-                    hint: const Text('Select medicine'),
-                    items: _commonMedicines.map((med) {
-                      return DropdownMenuItem<Map<String, String>>(
-                        value: med,
-                        child: Text('${med['name']} ${med['dose']} — ${med['timing']}'),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) _addMedicineFromDropdown(val);
-                    },
-                  ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -372,30 +391,59 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                      labelText: 'Add from common tests',
-                      prefixIcon: Icon(Icons.science, color: Colors.purple.shade600),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.purple.shade400, width: 2),
+                  if (_isLoadingTests)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.purple.shade600),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text('Loading tests...',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              )),
+                        ],
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: 'Add from common tests',
+                        prefixIcon: Icon(Icons.science, color: Colors.purple.shade600),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.purple.shade400, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      ),
+                      hint: const Text('Select test'),
+                      isExpanded: true,
+                      items: _commonTests.map((test) {
+                        return DropdownMenuItem<String>(
+                          value: test,
+                          child: Text(
+                            test,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null && !_selectedTests.contains(val)) {
+                          setState(() => _selectedTests.add(val));
+                        }
+                      },
                     ),
-                    hint: const Text('Select test'),
-                    items: _commonTests.map((test) {
-                      return DropdownMenuItem<String>(
-                        value: test,
-                        child: Text(test),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null && !_selectedTests.contains(val)) {
-                        setState(() => _selectedTests.add(val));
-                      }
-                    },
-                  ),
                   const SizedBox(height: 10),
                   Row(
                     children: [

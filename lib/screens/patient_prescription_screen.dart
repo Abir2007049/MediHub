@@ -634,11 +634,14 @@ const Text(
                                   size: 14,
                                   color: Colors.green.shade700),
                               const SizedBox(width: 5),
-                              Text(t,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.green.shade800,
-                                      fontWeight: FontWeight.w600)),
+                              Flexible(
+                                child: Text(t,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.green.shade800,
+                                        fontWeight: FontWeight.w600),
+                                    overflow: TextOverflow.ellipsis),
+                              ),
                             ],
                           ),
                         ))

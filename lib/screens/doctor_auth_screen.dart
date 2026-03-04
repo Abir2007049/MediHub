@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/bmdc_license_verification_service.dart';
 import 'doctor_home_screen.dart';
 
 class DoctorAuthScreen extends StatefulWidget {
@@ -165,10 +166,26 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
       return;
     }
 
+    final bmdcResult = BmdcLicenseVerificationService.verify(license);
+    if (!bmdcResult.isValid) {
+      _showSnackBar(bmdcResult.message, Colors.red);
+      return;
+    }
+
+    final licenseExists = _registeredDoctors.any(
+      (doc) => (doc['license'] ?? '').toUpperCase() == bmdcResult.normalizedLicense,
+    );
+    if (licenseExists) {
+      _showSnackBar('This BMDC license is already registered.', Colors.red);
+      return;
+    }
+
+    _licenseController.text = bmdcResult.normalizedLicense;
+
     setState(() {
       _registrationStep = 2;
     });
-    _showSnackBar('Proceed to step 2', Colors.green);
+    _showSnackBar('BMDC license verified. Proceed to step 2', Colors.green);
   }
 
   void _handleRegistrationStep2() {
@@ -581,7 +598,7 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                     const SizedBox(height: 12),
                     _buildTextField('NID Number (13 digits)', _nidController, Icons.badge),
                     const SizedBox(height: 12),
-                    _buildTextField('License Number', _licenseController, Icons.card_membership),
+                    _buildTextField('BMDC License (e.g., A-12345)', _licenseController, Icons.card_membership),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _handleRegistrationStep1,

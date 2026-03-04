@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'doctor_profile_screen.dart';
-import 'doctors_screen.dart';
 import 'auth_screen.dart';
 import 'patient_history_screen.dart';
 

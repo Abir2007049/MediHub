@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
-import 'login_doctor_screen.dart';
 import 'patient_home_screen.dart';
-import 'register_doctor_step1.dart';
-import 'doctor_login_screen.dart';
-import 'doctor_profile_screen.dart';
 import 'auth_screen.dart';
 import 'doctor_auth_screen.dart';
 import 'doctor_home_screen.dart';
