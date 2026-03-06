@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../screens/welcome_screen.dart';
 import '../screens/auth_screen.dart';
@@ -16,6 +17,22 @@ import '../screens/patient_prescription_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
+  redirect: (context, state) {
+    final session = Supabase.instance.client.auth.currentSession;
+    final isLoggedIn = session != null;
+    final path = state.matchedLocation;
+
+    // Public routes that don't require auth
+    const publicRoutes = ['/', '/auth', '/doctor-auth'];
+    final isPublicRoute = publicRoutes.contains(path);
+
+    // If not logged in and trying to access a protected route → welcome
+    if (!isLoggedIn && !isPublicRoute) {
+      return '/';
+    }
+
+    return null; // no redirect
+  },
   routes: [
     // ── Auth / Welcome ────────────────────────────────────────
     GoRoute(
