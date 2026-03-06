@@ -1,101 +1,75 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../blocs/doctor_profile/doctor_profile_cubit.dart';
+import '../blocs/doctor_profile/doctor_profile_state.dart';
+import '../models/doctor_profile.dart';
 import '../services/supabase_auth_service.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
-  final Map<String, String> doctorData;
-
-  const DoctorHomeScreen({Key? key, required this.doctorData})
-    : super(key: key);
+  const DoctorHomeScreen({Key? key}) : super(key: key);
 
   @override
   State<DoctorHomeScreen> createState() => _DoctorHomeScreenState();
 }
 
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
-  final _auth = SupabaseAuthService.instance;
-  late Map<String, String> _doctorData;
-
   @override
   void initState() {
     super.initState();
-    _doctorData = Map.from(widget.doctorData);
-    _loadProfileFromSupabase();
-  }
-
-  Future<void> _loadProfileFromSupabase() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
-    try {
-      final profile = await _auth.getDoctorProfile(user.id);
-      if (profile != null && mounted) {
-        setState(() {
-          _doctorData['name'] =
-              profile['full_name']?.toString() ?? _doctorData['name'] ?? '';
-          _doctorData['email'] =
-              profile['email']?.toString() ?? _doctorData['email'] ?? '';
-          _doctorData['phone'] =
-              profile['phone']?.toString() ?? _doctorData['phone'] ?? '';
-          _doctorData['specialization'] =
-              profile['specialization']?.toString() ??
-              _doctorData['specialization'] ??
-              '';
-          _doctorData['degree'] =
-              profile['degree']?.toString() ?? _doctorData['degree'] ?? '';
-          _doctorData['medicalCollege'] =
-              profile['medical_college']?.toString() ??
-              _doctorData['medicalCollege'] ??
-              '';
-          _doctorData['license'] =
-              profile['license']?.toString() ?? _doctorData['license'] ?? '';
-          _doctorData['hospital'] =
-              profile['hospital']?.toString() ?? _doctorData['hospital'] ?? '';
-          _doctorData['department'] =
-              profile['department']?.toString() ??
-              _doctorData['department'] ??
-              '';
-          _doctorData['location'] = profile['location']?.toString() ?? 'Dhaka';
-          _doctorData['description'] =
-              profile['description']?.toString() ??
-              'Professional medical expert dedicated to patient care.';
-          _doctorData['consultationFee'] =
-              profile['consultation_fee']?.toString() ?? '500';
-          _doctorData['diagnostic'] =
-              profile['diagnostic']?.toString() ?? 'MediHub Centre';
-          _doctorData['experience'] = profile['experience']?.toString() ?? '';
-          _doctorData['profileImage'] =
-              profile['profile_image']?.toString() ?? '';
-        });
-      }
-    } catch (_) {
-      // Could not fetch – use data passed via route
-    }
+    context.read<DoctorProfileCubit>().loadProfile();
   }
 
   Future<void> _navigateToEditProfile() async {
-    final result = await context.push<bool>(
-      '/doctor/edit-profile',
-      extra: _doctorData,
-    );
-
-    // Reload profile if changes were saved
+    final result = await context.push<bool>('/doctor/edit-profile');
     if (result == true) {
-      await _loadProfileFromSupabase();
+      if (mounted) context.read<DoctorProfileCubit>().loadProfile();
     }
   }
 
   Future<void> _handleLogout() async {
     try {
-      await _auth.signOut();
+      await SupabaseAuthService.instance.signOut();
     } catch (_) {}
-    if (mounted) {
-      context.go('/doctor-auth');
-    }
+    if (mounted) context.go('/doctor-auth');
   }
 
+  @override
   Widget build(BuildContext context) {
+    return BlocBuilder<DoctorProfileCubit, DoctorProfileState>(
+      builder: (context, state) {
+        if (state is DoctorProfileLoading || state is DoctorProfileInitial) {
+          return Scaffold(
+            backgroundColor: Colors.grey.shade50,
+            body: const Center(
+              child: CircularProgressIndicator(color: Colors.green),
+            ),
+          );
+        }
+        if (state is DoctorProfileError) {
+          return Scaffold(
+            backgroundColor: Colors.grey.shade50,
+            body: Center(child: Text('Error: ${state.message}')),
+          );
+        }
+        final profile = state is DoctorProfileLoaded
+            ? state.profile
+            : state is DoctorProfileSaved
+            ? state.profile
+            : null;
+        if (profile == null) {
+          return Scaffold(
+            backgroundColor: Colors.grey.shade50,
+            body: const Center(child: Text('Profile not found')),
+          );
+        }
+        return _buildScaffold(profile);
+      },
+    );
+  }
+
+  Widget _buildScaffold(DoctorProfile p) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -104,7 +78,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           children: [
             const Text('Doctor Dashboard', style: TextStyle(fontSize: 16)),
             Text(
-              'Welcome, ${_doctorData['name']}',
+              'Welcome, ${p.fullName}',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
             ),
           ],
@@ -116,33 +90,24 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'Patient Consultation History',
-            onPressed: () {
-              context.push(
-                '/doctor/history',
-                extra: {
-                  'doctorEmail': _doctorData['email'] ?? '',
-                  'doctorName': _doctorData['name'] ?? '',
-                  'doctorSpecialization': _doctorData['specialization'] ?? '',
-                },
-              );
-            },
+            onPressed: () => context.push('/doctor/history'),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
               showDialog(
                 context: context,
-                builder: (context) => AlertDialog(
+                builder: (ctx) => AlertDialog(
                   title: const Text('Logout'),
                   content: const Text('Are you sure you want to logout?'),
                   actions: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(ctx),
                       child: const Text('Cancel'),
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        Navigator.pop(context);
+                        Navigator.pop(ctx);
                         _handleLogout();
                       },
                       style: ElevatedButton.styleFrom(
@@ -195,21 +160,19 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
                         ),
-                        child: _doctorData['profileImage']?.isNotEmpty == true
+                        child: p.profileImage?.isNotEmpty == true
                             ? ClipOval(
                                 child: Image.file(
-                                  File(_doctorData['profileImage']!),
+                                  File(p.profileImage!),
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return CircleAvatar(
-                                      backgroundColor: Colors.white,
-                                      child: Icon(
-                                        Icons.medical_services,
-                                        color: Colors.green.shade600,
-                                        size: 40,
-                                      ),
-                                    );
-                                  },
+                                  errorBuilder: (_, __, ___) => CircleAvatar(
+                                    backgroundColor: Colors.white,
+                                    child: Icon(
+                                      Icons.medical_services,
+                                      color: Colors.green.shade600,
+                                      size: 40,
+                                    ),
+                                  ),
                                 ),
                               )
                             : CircleAvatar(
@@ -227,7 +190,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _doctorData['name']!,
+                              p.fullName,
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -236,7 +199,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              _doctorData['specialization']!,
+                              p.specialization ?? '',
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.white70,
@@ -258,7 +221,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'License: ${_doctorData['license']}',
+                      'License: ${p.license ?? ''}',
                       style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ),
@@ -279,39 +242,35 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             const SizedBox(height: 12),
             _buildInfoCard(
               'Specialization',
-              _doctorData['specialization']!,
+              p.specialization ?? '',
               Icons.healing,
             ),
             const SizedBox(height: 12),
-            _buildInfoCard('Degree', _doctorData['degree']!, Icons.school),
+            _buildInfoCard('Degree', p.degree ?? '', Icons.school),
             const SizedBox(height: 12),
-            if (_doctorData['license']!.isNotEmpty)
+            if ((p.license ?? '').isNotEmpty)
               _buildInfoCard(
                 'License Number',
-                _doctorData['license']!,
+                p.license!,
                 Icons.card_membership,
               ),
-            if (_doctorData['license']!.isNotEmpty) const SizedBox(height: 12),
+            if ((p.license ?? '').isNotEmpty) const SizedBox(height: 12),
             _buildInfoCard(
               'Medical College',
-              _doctorData['medicalCollege']!,
+              p.medicalCollege ?? '',
               Icons.apartment,
             ),
-            if (_doctorData['hospital']!.isNotEmpty) ...[
+            if ((p.hospital ?? '').isNotEmpty) ...[
               const SizedBox(height: 12),
               _buildInfoCard(
                 'Current Hospital',
-                _doctorData['hospital']!,
+                p.hospital!,
                 Icons.local_hospital,
               ),
             ],
-            if (_doctorData['department']!.isNotEmpty) ...[
+            if ((p.department ?? '').isNotEmpty) ...[
               const SizedBox(height: 12),
-              _buildInfoCard(
-                'Department',
-                _doctorData['department']!,
-                Icons.domain,
-              ),
+              _buildInfoCard('Department', p.department!, Icons.domain),
             ],
             const SizedBox(height: 24),
 
@@ -325,9 +284,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildInfoCard('Email', _doctorData['email']!, Icons.email),
+            _buildInfoCard('Email', p.email, Icons.email),
             const SizedBox(height: 12),
-            _buildInfoCard('Phone', _doctorData['phone']!, Icons.phone),
+            _buildInfoCard('Phone', p.phone ?? '', Icons.phone),
             const SizedBox(height: 24),
 
             // Additional Information
@@ -342,25 +301,21 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             const SizedBox(height: 12),
             _buildInfoCard(
               'Diagnostic Centre',
-              _doctorData['diagnostic'] ?? 'MediHub Centre',
+              p.diagnostic,
               Icons.local_hospital,
             ),
             const SizedBox(height: 12),
-            _buildInfoCard(
-              'Location',
-              _doctorData['location'] ?? 'Dhaka',
-              Icons.location_on,
-            ),
+            _buildInfoCard('Location', p.location, Icons.location_on),
             const SizedBox(height: 12),
             _buildInfoCard(
               'Consultation Fee',
-              '৳${_doctorData['consultationFee'] ?? '500'}/appointment',
+              '৳${p.consultationFee}/appointment',
               Icons.attach_money,
             ),
             const SizedBox(height: 24),
 
             // Professional Bio
-            if ((_doctorData['description']?.isNotEmpty ?? false)) ...[
+            if ((p.description ?? '').isNotEmpty) ...[
               Text(
                 'Professional Bio',
                 style: TextStyle(
@@ -378,7 +333,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                   border: Border.all(color: Colors.green.shade100),
                 ),
                 child: Text(
-                  _doctorData['description'] ?? 'No bio added',
+                  p.description!,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade700,

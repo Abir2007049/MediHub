@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../blocs/auth/auth_cubit.dart';
+import '../models/patient_profile.dart';
 import '../services/supabase_auth_service.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -115,13 +118,10 @@ class _AuthScreenState extends State<AuthScreen> {
         // Existing user → go to patient home
         _showSnackBar('Welcome back, ${profile['full_name']}!', Colors.green);
         if (mounted) {
-          context.go(
-            '/patient',
-            extra: {
-              'patientName': profile['full_name'] as String,
-              'patientMobile': _phoneController.text.trim(),
-            },
+          context.read<AuthCubit>().setPatientAuthenticated(
+            PatientProfile.fromJson(profile),
           );
+          context.go('/patient');
         }
       } else {
         // New user → ask for name
@@ -157,13 +157,13 @@ class _AuthScreenState extends State<AuthScreen> {
 
       _showSnackBar('Welcome, $name!', Colors.green);
       if (mounted) {
-        context.go(
-          '/patient',
-          extra: {
-            'patientName': name,
-            'patientMobile': _phoneController.text.trim(),
-          },
-        );
+        final freshProfile = await _auth.getPatientProfile(user.id);
+        if (freshProfile != null) {
+          context.read<AuthCubit>().setPatientAuthenticated(
+            PatientProfile.fromJson(freshProfile),
+          );
+        }
+        context.go('/patient');
       }
     } catch (e) {
       _showSnackBar('Failed to save profile. Please try again.', Colors.red);

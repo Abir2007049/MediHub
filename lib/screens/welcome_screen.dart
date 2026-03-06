@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../blocs/auth/auth_cubit.dart';
 import '../services/supabase_auth_service.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -28,39 +30,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
       if (!mounted) return;
 
-      if (role == 'doctor') {
-        final profile = await _auth.getDoctorProfile(user.id);
-        if (profile != null && mounted) {
-          final doctorData = <String, String>{
-            'name': profile['full_name']?.toString() ?? '',
-            'email': profile['email']?.toString() ?? '',
-            'phone': profile['phone']?.toString() ?? '',
-            'nid': profile['nid']?.toString() ?? '',
-            'license': profile['license']?.toString() ?? '',
-            'specialization': profile['specialization']?.toString() ?? '',
-            'hospital': profile['hospital']?.toString() ?? '',
-            'department': profile['department']?.toString() ?? '',
-            'degree': profile['degree']?.toString() ?? '',
-            'medicalCollege': profile['medical_college']?.toString() ?? '',
-            'location': profile['location']?.toString() ?? 'Dhaka',
-            'description': profile['description']?.toString() ?? '',
-            'consultationFee': profile['consultation_fee']?.toString() ?? '500',
-            'diagnostic': profile['diagnostic']?.toString() ?? 'MediHub Centre',
-            'experience': profile['experience']?.toString() ?? '',
-            'profileImage': profile['profile_image']?.toString() ?? '',
-          };
-          context.go('/doctor', extra: doctorData);
-        }
-      } else if (role == 'patient') {
-        final profile = await _auth.getPatientProfile(user.id);
-        if (profile != null && mounted) {
-          context.go(
-            '/patient',
-            extra: {
-              'patientName': profile['full_name'] as String? ?? '',
-              'patientMobile': profile['phone'] as String? ?? '',
-            },
-          );
+      if (mounted) {
+        await context.read<AuthCubit>().checkSession();
+        if (!mounted) return;
+        if (role == 'doctor') {
+          context.go('/doctor');
+        } else if (role == 'patient') {
+          context.go('/patient');
         }
       }
     } catch (_) {
