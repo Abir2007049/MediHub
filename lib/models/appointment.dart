@@ -4,7 +4,7 @@ part 'appointment.freezed.dart';
 part 'appointment.g.dart';
 
 @freezed
-class Appointment with _$Appointment {
+sealed class Appointment with _$Appointment {
   const factory Appointment({
     required int id,
     @JsonKey(name: 'user_id') required int userId,
@@ -14,5 +14,6 @@ class Appointment with _$Appointment {
     required String status,
   }) = _Appointment;
 
-  factory Appointment.fromJson(Map<String, dynamic> json) => _$AppointmentFromJson(json);
+  factory Appointment.fromJson(Map<String, dynamic> json) =>
+      _$AppointmentFromJson(json);
 }
