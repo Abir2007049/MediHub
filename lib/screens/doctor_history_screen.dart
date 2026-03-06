@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'prescription_screen.dart';
 
 class DoctorHistoryScreen extends StatefulWidget {
   final String doctorEmail;
@@ -155,11 +155,21 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
   }
 
   String _dayName(DateTime dt) {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
     return days[dt.weekday - 1];
   }
 
-  Future<Map<String, dynamic>?> _loadPrescription(Map<String, dynamic> appt) async {
+  Future<Map<String, dynamic>?> _loadPrescription(
+    Map<String, dynamic> appt,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final key = 'prescription_${appt['timestamp']}';
     final json = prefs.getString(key);
@@ -183,8 +193,14 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           tabs: [
-            Tab(text: 'Consulted (${_isLoading ? "…" : _pastAppointments.length})'),
-            Tab(text: 'Upcoming (${_isLoading ? "…" : _upcomingAppointments.length})'),
+            Tab(
+              text:
+                  'Consulted (${_isLoading ? "…" : _pastAppointments.length})',
+            ),
+            Tab(
+              text:
+                  'Upcoming (${_isLoading ? "…" : _upcomingAppointments.length})',
+            ),
           ],
         ),
       ),
@@ -198,16 +214,20 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _pastAppointments.length,
-                        itemBuilder: (context, i) =>
-                            _buildPatientCard(_pastAppointments[i], isPast: true),
+                        itemBuilder: (context, i) => _buildPatientCard(
+                          _pastAppointments[i],
+                          isPast: true,
+                        ),
                       ),
                 _upcomingAppointments.isEmpty
                     ? _buildEmptyState('No upcoming appointments')
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _upcomingAppointments.length,
-                        itemBuilder: (context, i) =>
-                            _buildPatientCard(_upcomingAppointments[i], isPast: false),
+                        itemBuilder: (context, i) => _buildPatientCard(
+                          _upcomingAppointments[i],
+                          isPast: false,
+                        ),
                       ),
               ],
             ),
@@ -221,11 +241,14 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
         children: [
           Icon(Icons.people_outline, size: 90, color: Colors.grey.shade300),
           const SizedBox(height: 16),
-          Text(message,
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade500)),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade500,
+            ),
+          ),
         ],
       ),
     );
@@ -252,9 +275,10 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                 : null,
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2)),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
             ],
           ),
           child: Column(
@@ -279,11 +303,15 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                       radius: 26,
                       backgroundColor: Colors.white,
                       child: Text(
-                        (appt['patientName'] ?? 'P').substring(0, 1).toUpperCase(),
+                        (appt['patientName'] ?? 'P')
+                            .substring(0, 1)
+                            .toUpperCase(),
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: isPast ? Colors.green.shade700 : Colors.green.shade500,
+                          color: isPast
+                              ? Colors.green.shade700
+                              : Colors.green.shade500,
                         ),
                       ),
                     ),
@@ -295,20 +323,29 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                           Text(
                             appt['patientName'] ?? 'Patient',
                             style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Row(
                             children: [
-                              const Icon(Icons.phone, color: Colors.white70, size: 12),
+                              const Icon(
+                                Icons.phone,
+                                color: Colors.white70,
+                                size: 12,
+                              ),
                               const SizedBox(width: 4),
-                              Text(appt['patientMobile'] ?? 'N/A',
-                                  style: const TextStyle(
-                                      fontSize: 12, color: Colors.white70)),
+                              Text(
+                                appt['patientMobile'] ?? 'N/A',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -316,7 +353,10 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                     ),
                     if (hasPrescription)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.25),
                           borderRadius: BorderRadius.circular(8),
@@ -326,11 +366,14 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                           children: [
                             Icon(Icons.check, color: Colors.white, size: 12),
                             SizedBox(width: 3),
-                            Text('Rx Done',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold)),
+                            Text(
+                              'Rx Done',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -345,11 +388,23 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                   children: [
                     Row(
                       children: [
-                        _infoChip(Icons.calendar_today, appt['selectedDay'] ?? 'N/A', Colors.green.shade700),
+                        _infoChip(
+                          Icons.calendar_today,
+                          appt['selectedDay'] ?? 'N/A',
+                          Colors.green.shade700,
+                        ),
                         const SizedBox(width: 6),
-                        _infoChip(Icons.access_time, appt['approximateTime'] ?? 'N/A', Colors.green.shade600),
+                        _infoChip(
+                          Icons.access_time,
+                          appt['approximateTime'] ?? 'N/A',
+                          Colors.green.shade600,
+                        ),
                         const SizedBox(width: 6),
-                        _infoChip(Icons.tag, '#${appt['serialNumber']}', Colors.green.shade500),
+                        _infoChip(
+                          Icons.tag,
+                          '#${appt['serialNumber']}',
+                          Colors.green.shade500,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -358,7 +413,10 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                         Flexible(
                           child: Text(
                             '৳${appt['consultationFee']}  •  ${appt['paymentMethod'] ?? "N/A"}',
-                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -367,9 +425,10 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                           child: Text(
                             isPast ? 'Visited: $fDate' : 'Booked: $fDate',
                             style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade500,
-                                fontStyle: FontStyle.italic),
+                              fontSize: 11,
+                              color: Colors.grey.shade500,
+                              fontStyle: FontStyle.italic,
+                            ),
                             textAlign: TextAlign.end,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -381,7 +440,10 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                     if (hasPrescription && hasFollowUp) ...[
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(8),
@@ -389,15 +451,20 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.event_repeat, color: Colors.green.shade700, size: 14),
+                            Icon(
+                              Icons.event_repeat,
+                              color: Colors.green.shade700,
+                              size: 14,
+                            ),
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
                                 'Follow-up in ${prescription?['followUpDate'] ?? ""}  •  ৳${prescription?['followUpFee'] ?? ""}',
                                 style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.green.shade700,
-                                    fontWeight: FontWeight.w600),
+                                  fontSize: 12,
+                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.w600,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -413,25 +480,27 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PrescriptionScreen(
-                                appointment: appt,
-                                doctorEmail: widget.doctorEmail,
-                                doctorName: widget.doctorName,
-                                doctorSpecialization:
-                                    widget.doctorSpecialization,
-                              ),
-                            ),
+                          await context.push(
+                            '/doctor/history/prescription',
+                            extra: {
+                              'appointment': appt,
+                              'doctorEmail': widget.doctorEmail,
+                              'doctorName': widget.doctorName,
+                              'doctorSpecialization':
+                                  widget.doctorSpecialization,
+                            },
                           );
                           setState(() {});
                         },
                         icon: Icon(
-                          hasPrescription ? Icons.edit_note : Icons.medical_services,
+                          hasPrescription
+                              ? Icons.edit_note
+                              : Icons.medical_services,
                           size: 16,
                         ),
-                        label: Text(hasPrescription ? 'Edit Prescription' : 'Prescribe'),
+                        label: Text(
+                          hasPrescription ? 'Edit Prescription' : 'Prescribe',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: hasPrescription
                               ? Colors.green.shade700
@@ -439,7 +508,8 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                           textStyle: const TextStyle(fontSize: 13),
                         ),
                       ),
@@ -473,7 +543,10 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
               child: Text(
                 label,
                 style: TextStyle(
-                    fontSize: 11, color: color, fontWeight: FontWeight.w600),
+                  fontSize: 11,
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

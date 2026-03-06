@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'payment_screen.dart';
+import 'package:go_router/go_router.dart';
 
 class AppointmentBookingScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
-  const AppointmentBookingScreen({Key? key, required this.doctor}) : super(key: key);
+  const AppointmentBookingScreen({Key? key, required this.doctor})
+    : super(key: key);
 
   @override
-  State<AppointmentBookingScreen> createState() => _AppointmentBookingScreenState();
+  State<AppointmentBookingScreen> createState() =>
+      _AppointmentBookingScreenState();
 }
 
 class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
@@ -18,23 +20,56 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
     'Saturday': {
       'timeRange': '4:00 PM - 8:00 PM',
       'totalSeats': 40,
-      'bookedSeats': [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39], // Demo: 20 booked
+      'bookedSeats': [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+      ], // Demo: 20 booked
     },
     'Sunday': {
       'timeRange': '10:00 AM - 2:00 PM',
       'totalSeats': 30,
-      'bookedSeats': [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30], // Demo: 15 booked
+      'bookedSeats': [
+        2,
+        4,
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+      ], // Demo: 15 booked
     },
     'Monday': {
       'timeRange': '2:00 PM - 6:00 PM',
       'totalSeats': 35,
       'bookedSeats': [1, 5, 9, 13, 17, 21, 25, 29, 33], // Demo: 9 booked
     },
-    'Tuesday': {
-      'timeRange': 'Closed',
-      'totalSeats': 0,
-      'bookedSeats': [],
-    },
+    'Tuesday': {'timeRange': 'Closed', 'totalSeats': 0, 'bookedSeats': []},
     'Wednesday': {
       'timeRange': '3:00 PM - 7:00 PM',
       'totalSeats': 25,
@@ -45,15 +80,14 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
       'totalSeats': 20,
       'bookedSeats': [2, 6, 10, 14, 18], // Demo: 5 booked
     },
-    'Friday': {
-      'timeRange': 'Closed',
-      'totalSeats': 0,
-      'bookedSeats': [],
-    },
+    'Friday': {'timeRange': 'Closed', 'totalSeats': 0, 'bookedSeats': []},
   };
 
   // Calculate time subsections (10 patients per hour = 6 minutes per patient)
-  List<Map<String, dynamic>> _calculateTimeSlots(String timeRange, int totalSeats) {
+  List<Map<String, dynamic>> _calculateTimeSlots(
+    String timeRange,
+    int totalSeats,
+  ) {
     if (timeRange == 'Closed' || totalSeats == 0) return [];
 
     final parts = timeRange.split(' - ');
@@ -66,7 +100,8 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
     if (startTime == null || endTime == null) return [];
 
     // Calculate total hours
-    int totalMinutes = (endTime['hour']! - startTime['hour']!) * 60 +
+    int totalMinutes =
+        (endTime['hour']! - startTime['hour']!) * 60 +
         (endTime['minute']! - startTime['minute']!);
 
     // Each subsection is 1 hour (10 patients at 6 minutes each)
@@ -79,10 +114,14 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
 
     while (serialStart <= totalSeats) {
       final nextHour = currentHour + 1;
-      final serialEnd = (serialStart + patientsPerHour - 1).clamp(1, totalSeats);
+      final serialEnd = (serialStart + patientsPerHour - 1).clamp(
+        1,
+        totalSeats,
+      );
 
       subsections.add({
-        'timeLabel': '${_formatTime(currentHour, currentMinute)} - ${_formatTime(nextHour, currentMinute)}',
+        'timeLabel':
+            '${_formatTime(currentHour, currentMinute)} - ${_formatTime(nextHour, currentMinute)}',
         'serialStart': serialStart,
         'serialEnd': serialEnd,
       });
@@ -119,10 +158,15 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
     return '${displayHour}:${minute.toString().padLeft(2, '0')} $period';
   }
 
-  String? getApproximateTime(int serialNumber, String timeRange, int totalSeats) {
+  String? getApproximateTime(
+    int serialNumber,
+    String timeRange,
+    int totalSeats,
+  ) {
     final subsections = _calculateTimeSlots(timeRange, totalSeats);
     for (var subsection in subsections) {
-      if (serialNumber >= subsection['serialStart'] && serialNumber <= subsection['serialEnd']) {
+      if (serialNumber >= subsection['serialStart'] &&
+          serialNumber <= subsection['serialEnd']) {
         return subsection['timeLabel'];
       }
     }
@@ -131,8 +175,10 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedSchedule = _selectedDay != null ? _weeklySchedule[_selectedDay!] : null;
-    
+    final selectedSchedule = _selectedDay != null
+        ? _weeklySchedule[_selectedDay!]
+        : null;
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -163,7 +209,11 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                       : CircleAvatar(
                           radius: 28,
                           backgroundColor: Colors.green.shade50,
-                          child: const Icon(Icons.person, size: 28, color: Colors.green),
+                          child: const Icon(
+                            Icons.person,
+                            size: 28,
+                            color: Colors.green,
+                          ),
                         ),
                 ),
                 const SizedBox(width: 16),
@@ -199,9 +249,9 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 8),
-          
+
           // Day Selector - Horizontal Scrollable
           Container(
             color: Colors.white,
@@ -237,29 +287,41 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                       final availableSeats = totalSeats - bookedSeats.length;
 
                       return GestureDetector(
-                        onTap: isClosed ? null : () {
-                          setState(() {
-                            _selectedDay = day;
-                            _selectedSerialNumber = null; // Reset selection
-                          });
-                        },
+                        onTap: isClosed
+                            ? null
+                            : () {
+                                setState(() {
+                                  _selectedDay = day;
+                                  _selectedSerialNumber =
+                                      null; // Reset selection
+                                });
+                              },
                         child: Container(
                           width: 90,
                           margin: const EdgeInsets.only(right: 12),
                           decoration: BoxDecoration(
                             gradient: isSelected
                                 ? LinearGradient(
-                                    colors: [Colors.green.shade400, Colors.green.shade600],
+                                    colors: [
+                                      Colors.green.shade400,
+                                      Colors.green.shade600,
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   )
                                 : null,
-                            color: isSelected ? null : (isClosed ? Colors.grey.shade100 : Colors.white),
+                            color: isSelected
+                                ? null
+                                : (isClosed
+                                      ? Colors.grey.shade100
+                                      : Colors.white),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: isSelected
                                   ? Colors.green.shade700
-                                  : (isClosed ? Colors.grey.shade300 : Colors.green.shade200),
+                                  : (isClosed
+                                        ? Colors.grey.shade300
+                                        : Colors.green.shade200),
                               width: isSelected ? 2 : 1,
                             ),
                             boxShadow: isSelected
@@ -276,7 +338,9 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                isClosed ? Icons.cancel_outlined : Icons.calendar_today_rounded,
+                                isClosed
+                                    ? Icons.cancel_outlined
+                                    : Icons.calendar_today_rounded,
                                 color: isSelected
                                     ? Colors.white
                                     : (isClosed ? Colors.grey : Colors.green),
@@ -290,7 +354,9 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                                   fontSize: 14,
                                   color: isSelected
                                       ? Colors.white
-                                      : (isClosed ? Colors.grey : Colors.black87),
+                                      : (isClosed
+                                            ? Colors.grey
+                                            : Colors.black87),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -299,7 +365,9 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                                   '$availableSeats slots',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: isSelected ? Colors.white70 : Colors.grey.shade600,
+                                    color: isSelected
+                                        ? Colors.white70
+                                        : Colors.grey.shade600,
                                   ),
                                 ),
                               if (isClosed)
@@ -320,7 +388,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
               ],
             ),
           ),
-          
+
           // Time Slots Section
           Expanded(
             child: _selectedDay == null
@@ -354,7 +422,10 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Colors.green.shade50, Colors.green.shade100],
+                              colors: [
+                                Colors.green.shade50,
+                                Colors.green.shade100,
+                              ],
                             ),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: Colors.green.shade200),
@@ -400,30 +471,42 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                             ],
                           ),
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Legend
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _buildLegendItem(Colors.green.shade100, Colors.green, 'Available'),
+                            _buildLegendItem(
+                              Colors.green.shade100,
+                              Colors.green,
+                              'Available',
+                            ),
                             const SizedBox(width: 24),
-                            _buildLegendItem(Colors.red.shade100, Colors.red, 'Booked'),
+                            _buildLegendItem(
+                              Colors.red.shade100,
+                              Colors.red,
+                              'Booked',
+                            ),
                             const SizedBox(width: 24),
-                            _buildLegendItem(Colors.green.shade500, Colors.green.shade900, 'Selected'),
+                            _buildLegendItem(
+                              Colors.green.shade500,
+                              Colors.green.shade900,
+                              'Selected',
+                            ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Time Slots Grid
                         _buildTimeSlotsGrid(selectedSchedule),
                       ],
                     ),
                   ),
           ),
-          
+
           // Confirm Button
           Container(
             padding: const EdgeInsets.all(20),
@@ -452,7 +535,11 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle, color: Colors.green, size: 20),
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 20,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -485,7 +572,8 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                       ),
                     ),
                   ElevatedButton(
-                    onPressed: _selectedDay != null && _selectedSerialNumber != null
+                    onPressed:
+                        _selectedDay != null && _selectedSerialNumber != null
                         ? () {
                             final approximateTime = getApproximateTime(
                               _selectedSerialNumber!,
@@ -493,16 +581,14 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                               selectedSchedule['totalSeats'],
                             );
 
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PaymentScreen(
-                                  doctor: widget.doctor,
-                                  selectedDay: _selectedDay!,
-                                  selectedSerialNumber: _selectedSerialNumber!,
-                                  approximateTime: approximateTime,
-                                ),
-                              ),
+                            context.push(
+                              '/patient/doctor-profile/book/payment',
+                              extra: {
+                                'doctor': widget.doctor,
+                                'selectedDay': _selectedDay!,
+                                'selectedSerialNumber': _selectedSerialNumber!,
+                                'approximateTime': approximateTime,
+                              },
                             );
                           }
                         : null,
@@ -555,10 +641,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -568,7 +651,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
     final totalSeats = schedule['totalSeats'] as int;
     final bookedSeats = schedule['bookedSeats'] as List<int>;
     final timeRange = schedule['timeRange'] as String;
-    
+
     final subsections = _calculateTimeSlots(timeRange, totalSeats);
 
     if (subsections.isEmpty && totalSeats > 0) {
@@ -630,7 +713,10 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(12),
@@ -647,7 +733,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                 ],
               ),
             ),
-            
+
             // Serial Grid
             GridView.builder(
               shrinkWrap: true,
@@ -658,7 +744,8 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                 mainAxisSpacing: 10,
                 childAspectRatio: 1.1,
               ),
-              itemCount: subsection['serialEnd'] - subsection['serialStart'] + 1,
+              itemCount:
+                  subsection['serialEnd'] - subsection['serialStart'] + 1,
               itemBuilder: (context, index) {
                 final serialNumber = subsection['serialStart'] + index;
                 final isBooked = bookedSeats.contains(serialNumber);
@@ -667,7 +754,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                 return _buildSerialButton(serialNumber, isBooked, isSelected);
               },
             ),
-            
+
             const SizedBox(height: 24),
           ],
         );
@@ -729,11 +816,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                 ),
               ),
               if (isBooked)
-                Icon(
-                  Icons.close,
-                  size: 12,
-                  color: Colors.red.shade900,
-                ),
+                Icon(Icons.close, size: 12, color: Colors.red.shade900),
             ],
           ),
         ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'patient_home_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -18,16 +18,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // Demo registered users
   final List<Map<String, String>> _registeredUsers = [
-    {
-      'mobile': '01712345678',
-      'name': 'Ahmed Khan',
-      'pin': '12345',
-    },
-    {
-      'mobile': '01898765432',
-      'name': 'Fatima Begum',
-      'pin': '54321',
-    },
+    {'mobile': '01712345678', 'name': 'Ahmed Khan', 'pin': '12345'},
+    {'mobile': '01898765432', 'name': 'Fatima Begum', 'pin': '54321'},
   ];
 
   @override
@@ -58,7 +50,10 @@ class _AuthScreenState extends State<AuthScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('patient_mobile', mobile);
     await prefs.setString('patient_name', name);
-    await prefs.setString('patient_login_time', DateTime.now().toIso8601String());
+    await prefs.setString(
+      'patient_login_time',
+      DateTime.now().toIso8601String(),
+    );
   }
 
   void _handleLogin() async {
@@ -71,7 +66,10 @@ class _AuthScreenState extends State<AuthScreen> {
     }
 
     if (!_isValidMobile(mobile)) {
-      _showSnackBar('Mobile number must be 11 digits starting with 01', Colors.red);
+      _showSnackBar(
+        'Mobile number must be 11 digits starting with 01',
+        Colors.red,
+      );
       return;
     }
 
@@ -95,14 +93,9 @@ class _AuthScreenState extends State<AuthScreen> {
     _showSnackBar('Welcome ${user['name']}!', Colors.green);
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PatientHomeScreen(
-              patientName: user['name']!,
-              patientMobile: mobile,
-            ),
-          ),
+        context.go(
+          '/patient',
+          extra: {'patientName': user['name']!, 'patientMobile': mobile},
         );
       }
     });
@@ -119,7 +112,10 @@ class _AuthScreenState extends State<AuthScreen> {
     }
 
     if (!_isValidMobile(mobile)) {
-      _showSnackBar('Mobile number must be 11 digits starting with 01', Colors.red);
+      _showSnackBar(
+        'Mobile number must be 11 digits starting with 01',
+        Colors.red,
+      );
       return;
     }
 
@@ -139,25 +135,16 @@ class _AuthScreenState extends State<AuthScreen> {
       return;
     }
 
-    _registeredUsers.add({
-      'mobile': mobile,
-      'name': name,
-      'pin': pin,
-    });
+    _registeredUsers.add({'mobile': mobile, 'name': name, 'pin': pin});
 
     await _savePatientSession(mobile, name);
 
     _showSnackBar('Account created! Welcome ${name}!', Colors.green);
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PatientHomeScreen(
-              patientName: name,
-              patientMobile: mobile,
-            ),
-          ),
+        context.go(
+          '/patient',
+          extra: {'patientName': name, 'patientMobile': mobile},
         );
       }
     });
@@ -254,7 +241,10 @@ class _AuthScreenState extends State<AuthScreen> {
                             decoration: BoxDecoration(
                               gradient: _isLogin
                                   ? LinearGradient(
-                                      colors: [Colors.green.shade400, Colors.green.shade600],
+                                      colors: [
+                                        Colors.green.shade400,
+                                        Colors.green.shade600,
+                                      ],
                                     )
                                   : null,
                               color: _isLogin ? null : Colors.transparent,
@@ -274,7 +264,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                 'Login',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: _isLogin ? Colors.white : Colors.grey.shade600,
+                                  color: _isLogin
+                                      ? Colors.white
+                                      : Colors.grey.shade600,
                                   fontSize: 16,
                                 ),
                               ),
@@ -292,7 +284,10 @@ class _AuthScreenState extends State<AuthScreen> {
                             decoration: BoxDecoration(
                               gradient: !_isLogin
                                   ? LinearGradient(
-                                      colors: [Colors.green.shade400, Colors.green.shade600],
+                                      colors: [
+                                        Colors.green.shade400,
+                                        Colors.green.shade600,
+                                      ],
                                     )
                                   : null,
                               color: !_isLogin ? null : Colors.transparent,
@@ -312,7 +307,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                 'Sign Up',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: !_isLogin ? Colors.white : Colors.grey.shade600,
+                                  color: !_isLogin
+                                      ? Colors.white
+                                      : Colors.grey.shade600,
                                   fontSize: 16,
                                 ),
                               ),
@@ -339,8 +336,14 @@ class _AuthScreenState extends State<AuthScreen> {
                     controller: _nameController,
                     decoration: InputDecoration(
                       hintText: 'Enter your full name',
-                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                      prefixIcon: Icon(Icons.person, color: Colors.green.shade600),
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.person,
+                        color: Colors.green.shade600,
+                      ),
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -353,9 +356,15 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.green.shade500, width: 2),
+                        borderSide: BorderSide(
+                          color: Colors.green.shade500,
+                          width: 2,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -375,7 +384,10 @@ class _AuthScreenState extends State<AuthScreen> {
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
                     hintText: 'e.g., 01712345678',
-                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade400,
+                      fontSize: 14,
+                    ),
                     prefixIcon: Icon(Icons.phone, color: Colors.green.shade600),
                     filled: true,
                     fillColor: Colors.white,
@@ -389,9 +401,15 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.green.shade500, width: 2),
+                      borderSide: BorderSide(
+                        color: Colors.green.shade500,
+                        width: 2,
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -412,7 +430,10 @@ class _AuthScreenState extends State<AuthScreen> {
                   maxLength: 5,
                   decoration: InputDecoration(
                     hintText: 'Enter 5-digit PIN',
-                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade400,
+                      fontSize: 14,
+                    ),
                     prefixIcon: Icon(Icons.lock, color: Colors.green.shade600),
                     suffixIcon: GestureDetector(
                       onTap: () => setState(() => _obscurePin = !_obscurePin),
@@ -433,9 +454,15 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.green.shade500, width: 2),
+                      borderSide: BorderSide(
+                        color: Colors.green.shade500,
+                        width: 2,
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     counterText: '',
                   ),
                 ),
@@ -482,7 +509,11 @@ class _AuthScreenState extends State<AuthScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.info, color: Colors.blue.shade700, size: 20),
+                          Icon(
+                            Icons.info,
+                            color: Colors.blue.shade700,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Demo Credentials',

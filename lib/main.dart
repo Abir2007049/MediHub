@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
-import 'screens/welcome_screen.dart';
+import 'router/app_router.dart';
 
 void main() {
   runApp(const MediHubApp());
@@ -11,10 +11,10 @@ class MediHubApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'MediHub',
       theme: getAppTheme(),
-      home: const WelcomeScreen(),
+      routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
     );
   }

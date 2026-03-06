@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'appointment_booking_screen.dart';
+import 'package:go_router/go_router.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
@@ -10,7 +10,8 @@ class DoctorProfileScreen extends StatefulWidget {
   State<DoctorProfileScreen> createState() => _DoctorProfileScreenState();
 }
 
-class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTickerProviderStateMixin {
+class _DoctorProfileScreenState extends State<DoctorProfileScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late TextEditingController _reviewController;
   double _userRating = 5.0;
@@ -27,19 +28,19 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
       'name': 'Julia, Newark',
       'date': 'Jan 12',
       'rating': 4.5,
-      'comment': 'Very professional and caring. Highly recommended!'
+      'comment': 'Very professional and caring. Highly recommended!',
     },
     {
       'name': 'Michael Smith',
       'date': 'Jan 10',
       'rating': 5.0,
-      'comment': 'Excellent doctor. Took time to explain everything clearly.'
+      'comment': 'Excellent doctor. Took time to explain everything clearly.',
     },
     {
       'name': 'Sarah Johnson',
       'date': 'Jan 8',
       'rating': 4.0,
-      'comment': 'Good experience overall. Wait time was a bit long.'
+      'comment': 'Good experience overall. Wait time was a bit long.',
     },
   ];
 
@@ -129,7 +130,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           child: Icon(
-                            selectedRating >= starIndex ? Icons.star : Icons.star_border,
+                            selectedRating >= starIndex
+                                ? Icons.star
+                                : Icons.star_border,
                             color: Colors.orange,
                             size: 40,
                           ),
@@ -184,9 +187,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                       );
                     }
                   : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
               child: const Text('Submit Rating'),
             ),
           ],
@@ -217,7 +218,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
     final demoDoctor = {
       'name': widget.doctor['name'] ?? 'Dr. Demo Name',
       'degree': widget.doctor['degree'] ?? 'MBBS, FCPS',
-      'medicalCollege': widget.doctor['medicalCollege'] ?? 'Dhaka Medical College',
+      'medicalCollege':
+          widget.doctor['medicalCollege'] ?? 'Dhaka Medical College',
       'specialization': widget.doctor['specialization'] ?? 'Cardiologist',
       'diagnostic': widget.doctor['diagnostic'] ?? 'MediHub Diagnostic Centre',
       'location': widget.doctor['location'] ?? 'Dhaka',
@@ -225,8 +227,11 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
       'department': widget.doctor['department'] ?? 'General Medicine',
       'license': widget.doctor['license'] ?? 'BD-License-12345',
       'phone': widget.doctor['phone'] ?? '+880-1712345678',
-      'description': widget.doctor['description'] ?? 'Dr. ${widget.doctor['name'] ?? 'Demo'} is a licensed specialist with a passion for helping individuals unlock their full potential and lead healthier, more fulfilling lives. With a warm and empathetic approach, the doctor creates a safe space for patients.',
-      'schedules': widget.doctor['schedules'] ?? ['Sat 10am-1pm', 'Mon 2pm-5pm'],
+      'description':
+          widget.doctor['description'] ??
+          'Dr. ${widget.doctor['name'] ?? 'Demo'} is a licensed specialist with a passion for helping individuals unlock their full potential and lead healthier, more fulfilling lives. With a warm and empathetic approach, the doctor creates a safe space for patients.',
+      'schedules':
+          widget.doctor['schedules'] ?? ['Sat 10am-1pm', 'Mon 2pm-5pm'],
       'consultationFee': widget.doctor['consultationFee'] ?? 500,
       'image': widget.doctor['image'],
     };
@@ -256,7 +261,10 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.green.shade200, width: 3),
+                          border: Border.all(
+                            color: Colors.green.shade200,
+                            width: 3,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.green.withOpacity(0.15),
@@ -265,12 +273,20 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                             ),
                           ],
                         ),
-                        child: demoDoctor['image'] != null && demoDoctor['image'].toString().isNotEmpty
-                            ? ClipOval(child: _buildDoctorImage(demoDoctor['image']))
+                        child:
+                            demoDoctor['image'] != null &&
+                                demoDoctor['image'].toString().isNotEmpty
+                            ? ClipOval(
+                                child: _buildDoctorImage(demoDoctor['image']),
+                              )
                             : CircleAvatar(
                                 radius: 38,
                                 backgroundColor: Colors.green.shade50,
-                                child: Icon(Icons.person, size: 40, color: Colors.green.shade300),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 40,
+                                  color: Colors.green.shade300,
+                                ),
                               ),
                       ),
                       Positioned(
@@ -280,11 +296,18 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Colors.green.shade400, Colors.green.shade600],
+                              colors: [
+                                Colors.green.shade400,
+                                Colors.green.shade600,
+                              ],
                             ),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.verified, color: Colors.white, size: 16),
+                          child: const Icon(
+                            Icons.verified,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                         ),
                       ),
                     ],
@@ -333,7 +356,11 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                             const SizedBox(width: 10),
                             _buildMiniStat('👥', '$_patients+', Colors.blue),
                             const SizedBox(width: 10),
-                            _buildMiniStat('📊', '${_experience}+ yrs', Colors.purple),
+                            _buildMiniStat(
+                              '📊',
+                              '${_experience}+ yrs',
+                              Colors.purple,
+                            ),
                           ],
                         ),
                       ],
@@ -355,9 +382,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                       label: const Text('Message'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.green,
-                        side: BorderSide(color: Colors.green.shade400, width: 1.5),
+                        side: BorderSide(
+                          color: Colors.green.shade400,
+                          width: 1.5,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         textStyle: const TextStyle(fontSize: 13),
                       ),
                     ),
@@ -365,14 +397,20 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _showRatingDialog(context, demoDoctor['name']),
+                      onPressed: () =>
+                          _showRatingDialog(context, demoDoctor['name']),
                       icon: const Icon(Icons.star_border, size: 16),
                       label: const Text('Rate'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.orange,
-                        side: BorderSide(color: Colors.orange.shade400, width: 1.5),
+                        side: BorderSide(
+                          color: Colors.orange.shade400,
+                          width: 1.5,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         textStyle: const TextStyle(fontSize: 13),
                       ),
                     ),
@@ -381,22 +419,26 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AppointmentBookingScreen(doctor: widget.doctor),
-                          ),
+                        context.push(
+                          '/patient/doctor-profile/book',
+                          extra: widget.doctor,
                         );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade600,
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         elevation: 3,
                       ),
                       child: const Text(
                         'Book Now',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -447,8 +489,13 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _showRatingDialog(context, demoDoctor['name']),
-                      icon: const Icon(Icons.star_border, color: Colors.orange, size: 20),
+                      onPressed: () =>
+                          _showRatingDialog(context, demoDoctor['name']),
+                      icon: const Icon(
+                        Icons.star_border,
+                        color: Colors.orange,
+                        size: 20,
+                      ),
                       label: const Text('Rate'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.orange,
@@ -465,11 +512,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                     flex: 2,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AppointmentBookingScreen(doctor: widget.doctor),
-                          ),
+                        context.push(
+                          '/patient/doctor-profile/book',
+                          extra: widget.doctor,
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -512,10 +557,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -573,11 +615,26 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
             ),
           ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.school, 'Medical College', doctor['medicalCollege'], Colors.blue),
+          _buildInfoRow(
+            Icons.school,
+            'Medical College',
+            doctor['medicalCollege'],
+            Colors.blue,
+          ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.verified_user, 'Degree', doctor['degree'], Colors.purple),
+          _buildInfoRow(
+            Icons.verified_user,
+            'Degree',
+            doctor['degree'],
+            Colors.purple,
+          ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.card_membership, 'License Number', doctor['license'], Colors.orange),
+          _buildInfoRow(
+            Icons.card_membership,
+            'License Number',
+            doctor['license'],
+            Colors.orange,
+          ),
           const SizedBox(height: 28),
 
           // Work Information Section
@@ -590,11 +647,26 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
             ),
           ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.local_hospital, 'Hospital', doctor['hospital'], Colors.red),
+          _buildInfoRow(
+            Icons.local_hospital,
+            'Hospital',
+            doctor['hospital'],
+            Colors.red,
+          ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.work, 'Department', doctor['department'], Colors.teal),
+          _buildInfoRow(
+            Icons.work,
+            'Department',
+            doctor['department'],
+            Colors.teal,
+          ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.location_on, 'Location', doctor['location'], Colors.green),
+          _buildInfoRow(
+            Icons.location_on,
+            'Location',
+            doctor['location'],
+            Colors.green,
+          ),
           const SizedBox(height: 28),
 
           // Services Section
@@ -607,9 +679,19 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
             ),
           ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.attach_money, 'Consultation Fee', '৳${doctor['consultationFee']}/appointment', Colors.green),
+          _buildInfoRow(
+            Icons.attach_money,
+            'Consultation Fee',
+            '৳${doctor['consultationFee']}/appointment',
+            Colors.green,
+          ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.local_hospital_outlined, 'Diagnostic Centre', doctor['diagnostic'], Colors.indigo),
+          _buildInfoRow(
+            Icons.local_hospital_outlined,
+            'Diagnostic Centre',
+            doctor['diagnostic'],
+            Colors.indigo,
+          ),
           const SizedBox(height: 28),
 
           // Contact Section
@@ -712,13 +794,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Star Rating
                 Row(
                   children: [
                     const Text(
                       'Your Rating: ',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Row(
@@ -730,7 +815,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                             });
                           },
                           child: Icon(
-                            index < _userRating.floor() ? Icons.star : Icons.star_border,
+                            index < _userRating.floor()
+                                ? Icons.star
+                                : Icons.star_border,
                             color: Colors.orange.shade700,
                             size: 28,
                           ),
@@ -749,7 +836,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Review Text Box
                 TextField(
                   controller: _reviewController,
@@ -769,13 +856,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.green, width: 2),
+                      borderSide: const BorderSide(
+                        color: Colors.green,
+                        width: 2,
+                      ),
                     ),
                     contentPadding: const EdgeInsets.all(12),
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Submit Button
                 SizedBox(
                   width: double.infinity,
@@ -796,7 +886,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
             ),
           ),
           const SizedBox(height: 28),
-          
+
           // Overall Rating Card
           Container(
             padding: const EdgeInsets.all(20),
@@ -826,7 +916,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
                       children: List.generate(
                         5,
                         (index) => Icon(
-                          index < _rating.floor() ? Icons.star : Icons.star_border,
+                          index < _rating.floor()
+                              ? Icons.star
+                              : Icons.star_border,
                           color: Colors.orange,
                           size: 20,
                         ),
@@ -883,10 +975,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
               ),
               Text(
                 review['date'],
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
             ],
           ),
@@ -895,7 +984,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
             children: List.generate(
               5,
               (index) => Icon(
-                index < review['rating'].floor() ? Icons.star : Icons.star_border,
+                index < review['rating'].floor()
+                    ? Icons.star
+                    : Icons.star_border,
                 color: Colors.orange,
                 size: 16,
               ),
@@ -923,10 +1014,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
         children: [
           const Text(
             'Available Schedules',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           ...((doctor['schedules'] as List).map((schedule) {
@@ -1052,11 +1140,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> with SingleTi
               color: color.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              _getIconForColor(color),
-              color: color,
-              size: 20,
-            ),
+            child: Icon(_getIconForColor(color), color: color, size: 20),
           ),
           const SizedBox(height: 8),
           Text(

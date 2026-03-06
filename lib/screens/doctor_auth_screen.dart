@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/bmdc_license_verification_service.dart';
-import 'doctor_home_screen.dart';
 
 class DoctorAuthScreen extends StatefulWidget {
   const DoctorAuthScreen({Key? key}) : super(key: key);
@@ -128,12 +128,9 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
     _showSnackBar('Welcome ${doctor['name']}!', Colors.green);
     _saveDoctorSession(doctor).then((_) {
       Future.delayed(const Duration(seconds: 1), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DoctorHomeScreen(doctorData: doctor),
-          ),
-        );
+        if (mounted) {
+          context.go('/doctor', extra: doctor);
+        }
       });
     });
   }
@@ -145,7 +142,11 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
     final nid = _nidController.text.trim();
     final license = _licenseController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || phone.isEmpty || nid.isEmpty || license.isEmpty) {
+    if (name.isEmpty ||
+        email.isEmpty ||
+        phone.isEmpty ||
+        nid.isEmpty ||
+        license.isEmpty) {
       _showSnackBar('Please fill all fields', Colors.red);
       return;
     }
@@ -173,7 +174,8 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
     }
 
     final licenseExists = _registeredDoctors.any(
-      (doc) => (doc['license'] ?? '').toUpperCase() == bmdcResult.normalizedLicense,
+      (doc) =>
+          (doc['license'] ?? '').toUpperCase() == bmdcResult.normalizedLicense,
     );
     if (licenseExists) {
       _showSnackBar('This BMDC license is already registered.', Colors.red);
@@ -274,7 +276,10 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
     await prefs.setString('doctor_email', doctorData['email'] ?? '');
     await prefs.setString('doctor_name', doctorData['name'] ?? '');
     await prefs.setString('doctor_phone', doctorData['phone'] ?? '');
-    await prefs.setString('doctor_specialization', doctorData['specialization'] ?? '');
+    await prefs.setString(
+      'doctor_specialization',
+      doctorData['specialization'] ?? '',
+    );
     await prefs.setString('doctor_hospital', doctorData['hospital'] ?? '');
     await prefs.setString('doctor_department', doctorData['department'] ?? '');
     await prefs.setString('doctor_degree', doctorData['degree'] ?? '');
@@ -286,14 +291,14 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
   Future<bool> _isSessionValid() async {
     final prefs = await SharedPreferences.getInstance();
     final loginTimeStr = prefs.getString('login_time');
-    
+
     if (loginTimeStr == null) return false;
-    
+
     try {
       final loginTime = DateTime.parse(loginTimeStr);
       final now = DateTime.now();
       final diffInHours = now.difference(loginTime).inHours;
-      
+
       return diffInHours < 8;
     } catch (e) {
       return false;
@@ -318,9 +323,9 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
   Future<Map<String, String>?> _getSavedDoctorSession() async {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString('doctor_email');
-    
+
     if (email == null) return null;
-    
+
     return {
       'email': email,
       'name': prefs.getString('doctor_name') ?? '',
@@ -352,7 +357,10 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                         height: 80,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Colors.green.shade400, Colors.green.shade600],
+                            colors: [
+                              Colors.green.shade400,
+                              Colors.green.shade600,
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -413,7 +421,9 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: _isLogin ? Colors.white : Colors.transparent,
+                              color: _isLogin
+                                  ? Colors.white
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                               boxShadow: _isLogin
                                   ? [
@@ -429,7 +439,9 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                                 'Login',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: _isLogin ? Colors.green : Colors.grey.shade600,
+                                  color: _isLogin
+                                      ? Colors.green
+                                      : Colors.grey.shade600,
                                   fontSize: 16,
                                 ),
                               ),
@@ -448,7 +460,9 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: !_isLogin ? Colors.white : Colors.transparent,
+                              color: !_isLogin
+                                  ? Colors.white
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                               boxShadow: !_isLogin
                                   ? [
@@ -464,7 +478,9 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                                 'Register',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                color: !_isLogin ? Colors.green : Colors.grey.shade600,
+                                  color: !_isLogin
+                                      ? Colors.green
+                                      : Colors.grey.shade600,
                                   fontSize: 16,
                                 ),
                               ),
@@ -504,7 +520,10 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.green, width: 2),
+                        borderSide: const BorderSide(
+                          color: Colors.green,
+                          width: 2,
+                        ),
                       ),
                       filled: true,
                       fillColor: Colors.grey.shade50,
@@ -528,9 +547,13 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                       prefixIcon: const Icon(Icons.lock),
                       prefixIconColor: Colors.green,
                       suffixIcon: GestureDetector(
-                        onTap: () => setState(() => _obscureLoginPassword = !_obscureLoginPassword),
+                        onTap: () => setState(
+                          () => _obscureLoginPassword = !_obscureLoginPassword,
+                        ),
                         child: Icon(
-                          _obscureLoginPassword ? Icons.visibility_off : Icons.visibility,
+                          _obscureLoginPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                           color: Colors.green,
                         ),
                       ),
@@ -543,7 +566,10 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.green, width: 2),
+                        borderSide: const BorderSide(
+                          color: Colors.green,
+                          width: 2,
+                        ),
                       ),
                       filled: true,
                       fillColor: Colors.grey.shade50,
@@ -594,11 +620,23 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                     const SizedBox(height: 12),
                     _buildTextField('Email', _emailController, Icons.email),
                     const SizedBox(height: 12),
-                    _buildTextField('Phone Number', _phoneController, Icons.phone),
+                    _buildTextField(
+                      'Phone Number',
+                      _phoneController,
+                      Icons.phone,
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField('NID Number (13 digits)', _nidController, Icons.badge),
+                    _buildTextField(
+                      'NID Number (13 digits)',
+                      _nidController,
+                      Icons.badge,
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField('BMDC License (e.g., A-12345)', _licenseController, Icons.card_membership),
+                    _buildTextField(
+                      'BMDC License (e.g., A-12345)',
+                      _licenseController,
+                      Icons.card_membership,
+                    ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _handleRegistrationStep1,
@@ -638,19 +676,55 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField('Password', _passwordController, Icons.lock, obscure: _obscurePassword, onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword)),
+                    _buildTextField(
+                      'Password',
+                      _passwordController,
+                      Icons.lock,
+                      obscure: _obscurePassword,
+                      onToggleObscure: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField('Confirm Password', _confirmPasswordController, Icons.lock, obscure: _obscureConfirmPassword, onToggleObscure: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword)),
+                    _buildTextField(
+                      'Confirm Password',
+                      _confirmPasswordController,
+                      Icons.lock,
+                      obscure: _obscureConfirmPassword,
+                      onToggleObscure: () => setState(
+                        () =>
+                            _obscureConfirmPassword = !_obscureConfirmPassword,
+                      ),
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField('Specialization', _specializationController, Icons.healing),
+                    _buildTextField(
+                      'Specialization',
+                      _specializationController,
+                      Icons.healing,
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField('Degree (e.g., MBBS, MD)', _degreeController, Icons.school),
+                    _buildTextField(
+                      'Degree (e.g., MBBS, MD)',
+                      _degreeController,
+                      Icons.school,
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField('Medical College', _medicalCollegeController, Icons.apartment),
+                    _buildTextField(
+                      'Medical College',
+                      _medicalCollegeController,
+                      Icons.apartment,
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField('Current Hospital (Optional)', _hospitalController, Icons.local_hospital),
+                    _buildTextField(
+                      'Current Hospital (Optional)',
+                      _hospitalController,
+                      Icons.local_hospital,
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField('Department (Optional)', _departmentController, Icons.domain),
+                    _buildTextField(
+                      'Department (Optional)',
+                      _departmentController,
+                      Icons.domain,
+                    ),
                     const SizedBox(height: 24),
                     Row(
                       children: [
@@ -711,16 +785,20 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade200),
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.shade200),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.info, color: Colors.green.shade700, size: 20),
+                          Icon(
+                            Icons.info,
+                            color: Colors.green.shade700,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Demo Credentials',
@@ -786,9 +864,7 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                     ),
                   )
                 : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey.shade300),

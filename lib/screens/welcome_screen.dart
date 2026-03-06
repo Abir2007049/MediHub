@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
-import 'patient_home_screen.dart';
-import 'auth_screen.dart';
-import 'doctor_auth_screen.dart';
-import 'doctor_home_screen.dart';
-
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
@@ -39,18 +35,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         // If patient session is still valid (within 8 hours)
         if (diffInHours < 8) {
           final patientName = prefs.getString('patient_name') ?? '';
-          
+
           // Navigate directly to patient home
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PatientHomeScreen(
-                    patientName: patientName,
-                    patientMobile: patientMobile,
-                  ),
-                ),
+              context.go(
+                '/patient',
+                extra: {
+                  'patientName': patientName,
+                  'patientMobile': patientMobile,
+                },
               );
             }
           });
@@ -88,12 +82,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           // Navigate directly to doctor home
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DoctorHomeScreen(doctorData: doctorData),
-                ),
-              );
+              context.go('/doctor', extra: doctorData);
             }
           });
           return;
@@ -144,7 +133,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Title
                 Text(
                   'MediHub',
@@ -156,7 +145,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Subtitle
                 Text(
                   'Connect with Healthcare Professionals',
@@ -193,18 +182,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const DoctorAuthScreen(),
-                          ),
-                        );
+                        context.push('/doctor-auth');
                       },
                       borderRadius: BorderRadius.circular(16),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.medical_services, color: Colors.white, size: 24),
+                          Icon(
+                            Icons.medical_services,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                           const SizedBox(width: 12),
                           Text(
                             'Continue as Doctor',
@@ -242,18 +230,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AuthScreen(),
-                          ),
-                        );
+                        context.push('/auth');
                       },
                       borderRadius: BorderRadius.circular(16),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.people, color: Colors.green.shade600, size: 24),
+                          Icon(
+                            Icons.people,
+                            color: Colors.green.shade600,
+                            size: 24,
+                          ),
                           const SizedBox(width: 12),
                           Text(
                             'Continue as Patient',

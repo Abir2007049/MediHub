@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'doctor_profile_screen.dart';
-import 'auth_screen.dart';
-import 'patient_history_screen.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   final String? patientName;
   final String? patientMobile;
 
-  const PatientHomeScreen({
-    Key? key,
-    this.patientName,
-    this.patientMobile,
-  }) : super(key: key);
+  const PatientHomeScreen({Key? key, this.patientName, this.patientMobile})
+    : super(key: key);
 
   @override
   State<PatientHomeScreen> createState() => _PatientHomeScreenState();
@@ -23,7 +18,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   String _selectedLocation = 'All';
   String _selectedSpecialization = 'All';
   int _displayedDoctorCount = 4; // Initially show 4 doctors
-  
+
   final List<Map<String, dynamic>> _categories = [
     {'name': 'All', 'icon': Icons.medical_services},
     {'name': 'Cardiologist', 'icon': Icons.favorite},
@@ -70,10 +65,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     final query = _searchQuery.toLowerCase();
     return _doctors.where((doctor) {
       final matchesName = doctor['name']!.toLowerCase().contains(query);
-      final matchesSpecialization = _selectedSpecialization == 'All' ||
+      final matchesSpecialization =
+          _selectedSpecialization == 'All' ||
           doctor['specialization'] == _selectedSpecialization;
-      final matchesLocation = _selectedLocation == 'All' ||
-          doctor['location'] == _selectedLocation;
+      final matchesLocation =
+          _selectedLocation == 'All' || doctor['location'] == _selectedLocation;
       return matchesName && matchesSpecialization && matchesLocation;
     }).toList();
   }
@@ -93,11 +89,17 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('MediHub', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'MediHub',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             if (widget.patientName != null)
               Text(
                 'Hello, ${widget.patientName}!',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
           ],
         ),
@@ -109,13 +111,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             icon: const Icon(Icons.history),
             tooltip: 'Appointment History',
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PatientHistoryScreen(
-                    patientMobile: widget.patientMobile ?? '',
-                  ),
-                ),
+              context.push(
+                '/patient/history',
+                extra: widget.patientMobile ?? '',
               );
             },
           ),
@@ -131,30 +129,37 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   title: const Text('Logout'),
                   content: const Text('Are you sure you want to logout?'),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Cancel', style: TextStyle(color: Colors.grey.shade700)),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.grey.shade700),
+                      ),
                     ),
                     ElevatedButton(
                       onPressed: () async {
                         Navigator.pop(context);
                         await _clearPatientSession();
                         if (mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => const AuthScreen()),
-                          );
+                          context.go('/auth');
                         }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      child: const Text('Logout', style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                        'Logout',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ],
                 ),
@@ -189,7 +194,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Colors.green.shade400, Colors.green.shade600],
+                              colors: [
+                                Colors.green.shade400,
+                                Colors.green.shade600,
+                              ],
                             ),
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
@@ -200,7 +208,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.waving_hand, color: Colors.white, size: 24),
+                          child: const Icon(
+                            Icons.waving_hand,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -228,9 +240,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Search bar
                     Container(
                       decoration: BoxDecoration(
@@ -248,12 +260,22 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         onChanged: (val) => setState(() => _searchQuery = val),
                         decoration: InputDecoration(
                           hintText: 'Search doctors, specializations...',
-                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
-                          prefixIcon: Icon(Icons.search, color: Colors.green.shade600),
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 15,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: Colors.green.shade600,
+                          ),
                           suffixIcon: _searchQuery.isNotEmpty
                               ? IconButton(
-                                  icon: Icon(Icons.clear, color: Colors.grey.shade400),
-                                  onPressed: () => setState(() => _searchQuery = ''),
+                                  icon: Icon(
+                                    Icons.clear,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  onPressed: () =>
+                                      setState(() => _searchQuery = ''),
                                 )
                               : null,
                           border: OutlineInputBorder(
@@ -262,26 +284,44 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           ),
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 16,
+                          ),
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Quick stats
                     Row(
                       children: [
                         Expanded(
-                          child: _buildStatCard('150+', 'Doctors', Icons.people_outline, Colors.green),
+                          child: _buildStatCard(
+                            '150+',
+                            'Doctors',
+                            Icons.people_outline,
+                            Colors.green,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _buildStatCard('20+', 'Specialists', Icons.local_hospital_outlined, Colors.blue),
+                          child: _buildStatCard(
+                            '20+',
+                            'Specialists',
+                            Icons.local_hospital_outlined,
+                            Colors.blue,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _buildStatCard('4.8', 'Rating', Icons.star_outline, Colors.amber),
+                          child: _buildStatCard(
+                            '4.8',
+                            'Rating',
+                            Icons.star_outline,
+                            Colors.amber,
+                          ),
                         ),
                       ],
                     ),
@@ -304,7 +344,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              
+
               SizedBox(
                 height: 100,
                 child: ListView.separated(
@@ -314,9 +354,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final category = _categories[index];
-                    final isSelected = _selectedSpecialization == category['name'];
+                    final isSelected =
+                        _selectedSpecialization == category['name'];
                     return GestureDetector(
-                      onTap: () => setState(() => _selectedSpecialization = category['name']),
+                      onTap: () => setState(
+                        () => _selectedSpecialization = category['name'],
+                      ),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         curve: Curves.easeInOut,
@@ -324,7 +367,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         decoration: BoxDecoration(
                           gradient: isSelected
                               ? LinearGradient(
-                                  colors: [Colors.green.shade400, Colors.green.shade600],
+                                  colors: [
+                                    Colors.green.shade400,
+                                    Colors.green.shade600,
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 )
@@ -332,13 +378,15 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           color: isSelected ? null : Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isSelected ? Colors.green.shade600 : Colors.grey.shade200,
+                            color: isSelected
+                                ? Colors.green.shade600
+                                : Colors.grey.shade200,
                             width: isSelected ? 2 : 1,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: isSelected 
-                                  ? Colors.green.withOpacity(0.4) 
+                              color: isSelected
+                                  ? Colors.green.withOpacity(0.4)
                                   : Colors.black.withOpacity(0.05),
                               blurRadius: isSelected ? 12 : 6,
                               offset: Offset(0, isSelected ? 4 : 2),
@@ -351,20 +399,24 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: isSelected 
-                                    ? Colors.white.withOpacity(0.25) 
+                                color: isSelected
+                                    ? Colors.white.withOpacity(0.25)
                                     : Colors.green.withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
                                 category['icon'],
                                 size: 28,
-                                color: isSelected ? Colors.white : Colors.green.shade700,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.green.shade700,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
                               child: Text(
                                 category['name'],
                                 textAlign: TextAlign.center,
@@ -372,8 +424,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 11,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w600,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.grey.shade700,
                                 ),
                               ),
                             ),
@@ -394,7 +450,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   value: _selectedLocation,
                   decoration: InputDecoration(
                     hintText: 'Select Location',
-                    prefixIcon: Icon(Icons.location_on_outlined, color: Colors.green.shade600, size: 20),
+                    prefixIcon: Icon(
+                      Icons.location_on_outlined,
+                      color: Colors.green.shade600,
+                      size: 20,
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
@@ -407,22 +467,37 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.green.shade400, width: 2),
+                      borderSide: BorderSide(
+                        color: Colors.green.shade400,
+                        width: 2,
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                   ),
                   isExpanded: true,
                   items: [
-                    const DropdownMenuItem(value: 'All', child: Text('All Locations', overflow: TextOverflow.ellipsis)),
+                    const DropdownMenuItem(
+                      value: 'All',
+                      child: Text(
+                        'All Locations',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     ..._doctors
                         .map((d) => d['location'])
                         .toSet()
-                        .map((loc) => DropdownMenuItem(
-                              value: loc, 
-                              child: Text(loc!, overflow: TextOverflow.ellipsis),
-                            )),
+                        .map(
+                          (loc) => DropdownMenuItem(
+                            value: loc,
+                            child: Text(loc!, overflow: TextOverflow.ellipsis),
+                          ),
+                        ),
                   ],
-                  onChanged: (val) => setState(() => _selectedLocation = val ?? 'All'),
+                  onChanged: (val) =>
+                      setState(() => _selectedLocation = val ?? 'All'),
                 ),
               ),
 
@@ -435,7 +510,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _filteredDoctors.isEmpty ? 'No Doctors Found' : 'Available Doctors',
+                      _filteredDoctors.isEmpty
+                          ? 'No Doctors Found'
+                          : 'Available Doctors',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -460,8 +537,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: _filteredDoctors.length > _displayedDoctorCount 
-                    ? _displayedDoctorCount 
+                itemCount: _filteredDoctors.length > _displayedDoctorCount
+                    ? _displayedDoctorCount
                     : _filteredDoctors.length,
                 itemBuilder: (context, index) {
                   final doctor = _filteredDoctors[index];
@@ -482,11 +559,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   );
                 },
               ),
-              
+
               // Load More Button
               if (_filteredDoctors.length > _displayedDoctorCount)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -498,7 +578,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade50,
                         foregroundColor: Colors.green.shade700,
-                        side: BorderSide(color: Colors.green.shade400, width: 2),
+                        side: BorderSide(
+                          color: Colors.green.shade400,
+                          width: 2,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -514,7 +597,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ),
                   ),
                 ),
-              
+
               const SizedBox(height: 20),
             ],
           ),
@@ -522,7 +605,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       ),
     );
   }
-  Widget _buildStatCard(String value, String label, IconData icon, Color color) {
+
+  Widget _buildStatCard(
+    String value,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -600,12 +689,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => DoctorProfileScreen(doctor: doctor),
-              ),
-            );
+            context.push('/patient/doctor-profile', extra: doctor);
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
@@ -643,7 +727,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                             return Container(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [Colors.green.shade100, Colors.green.shade200],
+                                  colors: [
+                                    Colors.green.shade100,
+                                    Colors.green.shade200,
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
@@ -685,9 +772,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       ),
                   ],
                 ),
-                
+
                 const SizedBox(width: 16),
-                
+
                 // Doctor info
                 Expanded(
                   child: Column(
@@ -711,10 +798,16 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           ),
                           if (index == 0)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [Colors.green.shade400, Colors.green.shade600],
+                                  colors: [
+                                    Colors.green.shade400,
+                                    Colors.green.shade600,
+                                  ],
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 boxShadow: [
@@ -728,7 +821,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.circle, color: Colors.white, size: 6),
+                                  Icon(
+                                    Icons.circle,
+                                    color: Colors.white,
+                                    size: 6,
+                                  ),
                                   SizedBox(width: 4),
                                   Text(
                                     'Available',
@@ -743,21 +840,31 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                             ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       // Specialization
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green.shade200, width: 1),
+                          border: Border.all(
+                            color: Colors.green.shade200,
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.medical_services, size: 14, color: Colors.green.shade700),
+                            Icon(
+                              Icons.medical_services,
+                              size: 14,
+                              color: Colors.green.shade700,
+                            ),
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
@@ -774,13 +881,17 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       // Location
                       Row(
                         children: [
-                          Icon(Icons.location_on, size: 14, color: Colors.grey.shade500),
+                          Icon(
+                            Icons.location_on,
+                            size: 14,
+                            color: Colors.grey.shade500,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
@@ -796,21 +907,28 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 10),
-                      
+
                       // Rating and reviews
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.amber.shade50,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.star, size: 14, color: Colors.amber.shade700),
+                                Icon(
+                                  Icons.star,
+                                  size: 14,
+                                  color: Colors.amber.shade700,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '4.8',
@@ -837,9 +955,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(width: 8),
-                
+
                 // Arrow icon
                 Container(
                   padding: const EdgeInsets.all(8),

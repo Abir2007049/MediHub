@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'patient_history_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
@@ -23,7 +23,8 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   String? _selectedPaymentMethod;
-  final TextEditingController _accountNumberController = TextEditingController();
+  final TextEditingController _accountNumberController =
+      TextEditingController();
   final TextEditingController _cardNumberController = TextEditingController();
   final TextEditingController _cvvController = TextEditingController();
   final TextEditingController _expiryController = TextEditingController();
@@ -96,17 +97,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
     };
 
     // Save to patient history
-    final patientHistoryJson = prefs.getString('patient_history_$patientMobile');
-    List<dynamic> patientHistory = patientHistoryJson != null ? jsonDecode(patientHistoryJson) : [];
+    final patientHistoryJson = prefs.getString(
+      'patient_history_$patientMobile',
+    );
+    List<dynamic> patientHistory = patientHistoryJson != null
+        ? jsonDecode(patientHistoryJson)
+        : [];
     patientHistory.add(appointment);
-    await prefs.setString('patient_history_$patientMobile', jsonEncode(patientHistory));
+    await prefs.setString(
+      'patient_history_$patientMobile',
+      jsonEncode(patientHistory),
+    );
 
     // Save to doctor history
     if (doctorEmail.isNotEmpty) {
       final doctorHistoryJson = prefs.getString('doctor_history_$doctorEmail');
-      List<dynamic> doctorHistory = doctorHistoryJson != null ? jsonDecode(doctorHistoryJson) : [];
+      List<dynamic> doctorHistory = doctorHistoryJson != null
+          ? jsonDecode(doctorHistoryJson)
+          : [];
       doctorHistory.add(appointment);
-      await prefs.setString('doctor_history_$doctorEmail', jsonEncode(doctorHistory));
+      await prefs.setString(
+        'doctor_history_$doctorEmail',
+        jsonEncode(doctorHistory),
+      );
     }
   }
 
@@ -170,14 +183,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
     // Simulate payment processing
     Future.delayed(const Duration(seconds: 2), () async {
       Navigator.pop(context); // Close processing dialog
-      
+
       // Save appointment to history
       await _saveAppointmentHistory();
-      
+
       // Show success dialog
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: Row(
             children: const [
               Icon(Icons.check_circle, color: Colors.green, size: 30),
@@ -191,36 +204,38 @@ class _PaymentScreenState extends State<PaymentScreen> {
             children: [
               Text('Doctor: ${widget.doctor['name']}'),
               Text('Qualification: ${widget.doctor['degree'] ?? 'MBBS'}'),
-              Text('Medical College: ${widget.doctor['medicalCollege'] ?? 'Medical College'}'),
+              Text(
+                'Medical College: ${widget.doctor['medicalCollege'] ?? 'Medical College'}',
+              ),
               const SizedBox(height: 8),
               Text('Day: ${widget.selectedDay}'),
               Text('Serial Number: #${widget.selectedSerialNumber}'),
               if (widget.approximateTime != null)
                 Text('Approximate Time: ${widget.approximateTime}'),
               const Divider(),
-              Text('Consultation Fee: ৳${_consultationFee.toStringAsFixed(2)}/appointment'),
+              Text(
+                'Consultation Fee: ৳${_consultationFee.toStringAsFixed(2)}/appointment',
+              ),
               Text('Method: $_selectedPaymentMethod'),
               const SizedBox(height: 8),
               const Text(
                 'Your appointment has been confirmed!',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
               ),
             ],
           ),
           actions: [
             OutlinedButton.icon(
               onPressed: () async {
-                Navigator.pop(context); // Close success dialog
+                Navigator.pop(dialogContext); // Close success dialog
                 final prefs = await SharedPreferences.getInstance();
                 final patientMobile = prefs.getString('patient_mobile') ?? '';
 
                 if (!context.mounted) return;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PatientHistoryScreen(patientMobile: patientMobile),
-                  ),
-                );
+                context.push('/patient/history', extra: patientMobile);
               },
               icon: const Icon(Icons.history),
               label: const Text('Go to History'),
@@ -231,21 +246,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             const SizedBox(width: 8),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // Close success dialog
-                Navigator.pop(context); // Go back to appointment screen
-                Navigator.pop(context); // Go back to doctor profile
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Appointment booked successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
+              onPressed: () async {
+                Navigator.pop(dialogContext); // Close success dialog
+                final prefs = await SharedPreferences.getInstance();
+                final patientMobile = prefs.getString('patient_mobile') ?? '';
+                final patientName = prefs.getString('patient_name') ?? '';
+                if (!context.mounted) return;
+                context.go(
+                  '/patient',
+                  extra: {
+                    'patientName': patientName,
+                    'patientMobile': patientMobile,
+                  },
                 );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               child: const Text('Done'),
             ),
           ],
@@ -376,9 +391,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           labelText: '$_selectedPaymentMethod Account Number',
           hintText: '01XXXXXXXXX',
           prefixIcon: const Icon(Icons.phone),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -410,7 +423,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   children: [
                     const Text(
                       'Appointment Summary',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const Divider(),
                     Row(
@@ -444,7 +460,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Day:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Day:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         Text(widget.selectedDay),
                       ],
                     ),
@@ -452,7 +471,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Serial Number:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Serial Number:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         Text('#${widget.selectedSerialNumber}'),
                       ],
                     ),
@@ -461,7 +483,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Approximate Time:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Approximate Time:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           Text(widget.approximateTime!),
                         ],
                       ),
@@ -472,7 +497,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       children: [
                         const Text(
                           'Consultation Fee:',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           '৳${_consultationFee.toStringAsFixed(2)}/appointment',

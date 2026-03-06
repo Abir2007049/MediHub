@@ -1,15 +1,18 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 
 class DoctorEditProfileScreen extends StatefulWidget {
   final Map<String, String> doctorData;
 
-  const DoctorEditProfileScreen({Key? key, required this.doctorData}) : super(key: key);
+  const DoctorEditProfileScreen({Key? key, required this.doctorData})
+    : super(key: key);
 
   @override
-  State<DoctorEditProfileScreen> createState() => _DoctorEditProfileScreenState();
+  State<DoctorEditProfileScreen> createState() =>
+      _DoctorEditProfileScreenState();
 }
 
 class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
@@ -32,18 +35,42 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.doctorData['name'] ?? '');
-    _specializationController = TextEditingController(text: widget.doctorData['specialization'] ?? '');
-    _degreeController = TextEditingController(text: widget.doctorData['degree'] ?? '');
-    _medicalCollegeController = TextEditingController(text: widget.doctorData['medicalCollege'] ?? '');
-    _hospitalController = TextEditingController(text: widget.doctorData['hospital'] ?? '');
-    _departmentController = TextEditingController(text: widget.doctorData['department'] ?? '');
-    _locationController = TextEditingController(text: widget.doctorData['location'] ?? '');
-    _descriptionController = TextEditingController(text: widget.doctorData['description'] ?? '');
-    _consultationFeeController = TextEditingController(text: widget.doctorData['consultationFee'] ?? '500');
-    _diagnosticController = TextEditingController(text: widget.doctorData['diagnostic'] ?? '');
-    _licenseController = TextEditingController(text: widget.doctorData['license'] ?? '');
-    _experienceController = TextEditingController(text: widget.doctorData['experience'] ?? '12');
+    _nameController = TextEditingController(
+      text: widget.doctorData['name'] ?? '',
+    );
+    _specializationController = TextEditingController(
+      text: widget.doctorData['specialization'] ?? '',
+    );
+    _degreeController = TextEditingController(
+      text: widget.doctorData['degree'] ?? '',
+    );
+    _medicalCollegeController = TextEditingController(
+      text: widget.doctorData['medicalCollege'] ?? '',
+    );
+    _hospitalController = TextEditingController(
+      text: widget.doctorData['hospital'] ?? '',
+    );
+    _departmentController = TextEditingController(
+      text: widget.doctorData['department'] ?? '',
+    );
+    _locationController = TextEditingController(
+      text: widget.doctorData['location'] ?? '',
+    );
+    _descriptionController = TextEditingController(
+      text: widget.doctorData['description'] ?? '',
+    );
+    _consultationFeeController = TextEditingController(
+      text: widget.doctorData['consultationFee'] ?? '500',
+    );
+    _diagnosticController = TextEditingController(
+      text: widget.doctorData['diagnostic'] ?? '',
+    );
+    _licenseController = TextEditingController(
+      text: widget.doctorData['license'] ?? '',
+    );
+    _experienceController = TextEditingController(
+      text: widget.doctorData['experience'] ?? '12',
+    );
     _profileImagePath = widget.doctorData['profileImage'];
   }
 
@@ -72,7 +99,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
         maxHeight: 512,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
         setState(() {
           _profileImagePath = image.path;
@@ -120,19 +147,40 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
 
       // Update doctor session data
       await prefs.setString('doctor_name', _nameController.text.trim());
-      await prefs.setString('doctor_specialization', _specializationController.text.trim());
+      await prefs.setString(
+        'doctor_specialization',
+        _specializationController.text.trim(),
+      );
       await prefs.setString('doctor_degree', _degreeController.text.trim());
-      await prefs.setString('doctor_college', _medicalCollegeController.text.trim());
+      await prefs.setString(
+        'doctor_college',
+        _medicalCollegeController.text.trim(),
+      );
       await prefs.setString('doctor_hospital', _hospitalController.text.trim());
-      await prefs.setString('doctor_department', _departmentController.text.trim());
+      await prefs.setString(
+        'doctor_department',
+        _departmentController.text.trim(),
+      );
 
       // Save additional profile fields (as JSON or separate entries)
       await prefs.setString('doctor_location', _locationController.text.trim());
-      await prefs.setString('doctor_description', _descriptionController.text.trim());
-      await prefs.setString('doctor_consultation_fee', _consultationFeeController.text.trim());
-      await prefs.setString('doctor_diagnostic', _diagnosticController.text.trim());
+      await prefs.setString(
+        'doctor_description',
+        _descriptionController.text.trim(),
+      );
+      await prefs.setString(
+        'doctor_consultation_fee',
+        _consultationFeeController.text.trim(),
+      );
+      await prefs.setString(
+        'doctor_diagnostic',
+        _diagnosticController.text.trim(),
+      );
       await prefs.setString('doctor_license', _licenseController.text.trim());
-      await prefs.setString('doctor_experience', _experienceController.text.trim());
+      await prefs.setString(
+        'doctor_experience',
+        _experienceController.text.trim(),
+      );
 
       // Save profile image path
       if (_profileImagePath != null) {
@@ -147,7 +195,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
       );
 
       Future.delayed(const Duration(seconds: 1), () {
-        Navigator.pop(context, true); // Return true to indicate data was updated
+        context.pop(true); // Return true to indicate data was updated
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -170,7 +218,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
       ),
       body: SingleChildScrollView(
@@ -241,9 +289,19 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildTextField('Full Name', _nameController, Icons.person, 'Dr. Name'),
+            _buildTextField(
+              'Full Name',
+              _nameController,
+              Icons.person,
+              'Dr. Name',
+            ),
             const SizedBox(height: 12),
-            _buildTextField('Specialization', _specializationController, Icons.healing, 'e.g., Cardiologist'),
+            _buildTextField(
+              'Specialization',
+              _specializationController,
+              Icons.healing,
+              'e.g., Cardiologist',
+            ),
             const SizedBox(height: 24),
 
             // Professional Qualifications
@@ -256,11 +314,26 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildTextField('Degree', _degreeController, Icons.school, 'e.g., MBBS, FCPS'),
+            _buildTextField(
+              'Degree',
+              _degreeController,
+              Icons.school,
+              'e.g., MBBS, FCPS',
+            ),
             const SizedBox(height: 12),
-            _buildTextField('Medical College', _medicalCollegeController, Icons.apartment, 'College name'),
+            _buildTextField(
+              'Medical College',
+              _medicalCollegeController,
+              Icons.apartment,
+              'College name',
+            ),
             const SizedBox(height: 12),
-            _buildTextField('License Number', _licenseController, Icons.card_membership, 'Medical License No.'),
+            _buildTextField(
+              'License Number',
+              _licenseController,
+              Icons.card_membership,
+              'Medical License No.',
+            ),
             const SizedBox(height: 24),
 
             // Work Information
@@ -273,15 +346,41 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildTextField('Hospital/Diagnostic Centre', _diagnosticController, Icons.local_hospital, 'Centre name'),
+            _buildTextField(
+              'Hospital/Diagnostic Centre',
+              _diagnosticController,
+              Icons.local_hospital,
+              'Centre name',
+            ),
             const SizedBox(height: 12),
-            _buildTextField('Current Hospital', _hospitalController, Icons.domain, 'Optional'),
+            _buildTextField(
+              'Current Hospital',
+              _hospitalController,
+              Icons.domain,
+              'Optional',
+            ),
             const SizedBox(height: 12),
-            _buildTextField('Department', _departmentController, Icons.flag, 'Optional'),
+            _buildTextField(
+              'Department',
+              _departmentController,
+              Icons.flag,
+              'Optional',
+            ),
             const SizedBox(height: 12),
-            _buildTextField('Years of Experience', _experienceController, Icons.timeline, 'e.g., 12', keyboardType: TextInputType.number),
+            _buildTextField(
+              'Years of Experience',
+              _experienceController,
+              Icons.timeline,
+              'e.g., 12',
+              keyboardType: TextInputType.number,
+            ),
             const SizedBox(height: 12),
-            _buildTextField('Location', _locationController, Icons.location_on, 'City/Area'),
+            _buildTextField(
+              'Location',
+              _locationController,
+              Icons.location_on,
+              'City/Area',
+            ),
             const SizedBox(height: 24),
 
             // Services
@@ -294,7 +393,13 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildTextField('Consultation Fee (৳)', _consultationFeeController, Icons.attach_money, 'Amount per appointment', keyboardType: TextInputType.number),
+            _buildTextField(
+              'Consultation Fee (৳)',
+              _consultationFeeController,
+              Icons.attach_money,
+              'Amount per appointment',
+              keyboardType: TextInputType.number,
+            ),
             const SizedBox(height: 24),
 
             // About Section
@@ -312,7 +417,8 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
               maxLines: 5,
               decoration: InputDecoration(
                 labelText: 'Professional Bio',
-                hintText: 'Write about your experience, approach, and specialties...',
+                hintText:
+                    'Write about your experience, approach, and specialties...',
                 prefixIcon: const Icon(Icons.description),
                 prefixIconColor: Colors.green,
                 border: OutlineInputBorder(
@@ -364,7 +470,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
 
             // Cancel Button
             OutlinedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => context.pop(),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.green,
                 side: const BorderSide(color: Colors.green),
@@ -376,10 +482,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
               ),
               child: const Text(
                 'Cancel',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 20),
@@ -415,9 +518,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
             hintText: hint,
             prefixIcon: Icon(icon),
             prefixIconColor: Colors.green,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey.shade300),
