@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/supabase_auth_service.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   final Map<String, String> doctorData;
@@ -14,49 +14,64 @@ class DoctorHomeScreen extends StatefulWidget {
 }
 
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
+  final _auth = SupabaseAuthService.instance;
   late Map<String, String> _doctorData;
 
   @override
   void initState() {
     super.initState();
     _doctorData = Map.from(widget.doctorData);
-    _loadSavedProfile();
+    _loadProfileFromSupabase();
   }
 
-  Future<void> _loadSavedProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _doctorData['name'] =
-          prefs.getString('doctor_name') ?? _doctorData['name'] ?? '';
-      _doctorData['specialization'] =
-          prefs.getString('doctor_specialization') ??
-          _doctorData['specialization'] ??
-          '';
-      _doctorData['degree'] =
-          prefs.getString('doctor_degree') ?? _doctorData['degree'] ?? '';
-      _doctorData['medicalCollege'] =
-          prefs.getString('doctor_college') ??
-          _doctorData['medicalCollege'] ??
-          '';
-      _doctorData['license'] =
-          prefs.getString('doctor_license') ?? _doctorData['license'] ?? '';
-      _doctorData['hospital'] =
-          prefs.getString('doctor_hospital') ?? _doctorData['hospital'] ?? '';
-      _doctorData['department'] =
-          prefs.getString('doctor_department') ??
-          _doctorData['department'] ??
-          '';
-      _doctorData['location'] = prefs.getString('doctor_location') ?? 'Dhaka';
-      _doctorData['description'] =
-          prefs.getString('doctor_description') ??
-          'Professional medical expert dedicated to patient care.';
-      _doctorData['consultationFee'] =
-          prefs.getString('doctor_consultation_fee') ?? '500';
-      _doctorData['diagnostic'] =
-          prefs.getString('doctor_diagnostic') ?? 'MediHub Centre';
-      _doctorData['profileImage'] =
-          prefs.getString('doctor_profile_image') ?? '';
-    });
+  Future<void> _loadProfileFromSupabase() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final profile = await _auth.getDoctorProfile(user.id);
+      if (profile != null && mounted) {
+        setState(() {
+          _doctorData['name'] =
+              profile['full_name']?.toString() ?? _doctorData['name'] ?? '';
+          _doctorData['email'] =
+              profile['email']?.toString() ?? _doctorData['email'] ?? '';
+          _doctorData['phone'] =
+              profile['phone']?.toString() ?? _doctorData['phone'] ?? '';
+          _doctorData['specialization'] =
+              profile['specialization']?.toString() ??
+              _doctorData['specialization'] ??
+              '';
+          _doctorData['degree'] =
+              profile['degree']?.toString() ?? _doctorData['degree'] ?? '';
+          _doctorData['medicalCollege'] =
+              profile['medical_college']?.toString() ??
+              _doctorData['medicalCollege'] ??
+              '';
+          _doctorData['license'] =
+              profile['license']?.toString() ?? _doctorData['license'] ?? '';
+          _doctorData['hospital'] =
+              profile['hospital']?.toString() ?? _doctorData['hospital'] ?? '';
+          _doctorData['department'] =
+              profile['department']?.toString() ??
+              _doctorData['department'] ??
+              '';
+          _doctorData['location'] = profile['location']?.toString() ?? 'Dhaka';
+          _doctorData['description'] =
+              profile['description']?.toString() ??
+              'Professional medical expert dedicated to patient care.';
+          _doctorData['consultationFee'] =
+              profile['consultation_fee']?.toString() ?? '500';
+          _doctorData['diagnostic'] =
+              profile['diagnostic']?.toString() ?? 'MediHub Centre';
+          _doctorData['experience'] = profile['experience']?.toString() ?? '';
+          _doctorData['profileImage'] =
+              profile['profile_image']?.toString() ?? '';
+        });
+      }
+    } catch (_) {
+      // Could not fetch – use data passed via route
+    }
   }
 
   Future<void> _navigateToEditProfile() async {
@@ -67,28 +82,17 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
     // Reload profile if changes were saved
     if (result == true) {
-      await _loadSavedProfile();
+      await _loadProfileFromSupabase();
     }
   }
 
-  // Clear doctor session
-  Future<void> _clearDoctorSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('doctor_email');
-    await prefs.remove('doctor_name');
-    await prefs.remove('doctor_phone');
-    await prefs.remove('doctor_specialization');
-    await prefs.remove('doctor_hospital');
-    await prefs.remove('doctor_department');
-    await prefs.remove('doctor_degree');
-    await prefs.remove('doctor_college');
-    await prefs.remove('doctor_license');
-    await prefs.remove('login_time');
-    await prefs.remove('doctor_location');
-    await prefs.remove('doctor_description');
-    await prefs.remove('doctor_consultation_fee');
-    await prefs.remove('doctor_diagnostic');
-    await prefs.remove('doctor_profile_image');
+  Future<void> _handleLogout() async {
+    try {
+      await _auth.signOut();
+    } catch (_) {}
+    if (mounted) {
+      context.go('/doctor-auth');
+    }
   }
 
   Widget build(BuildContext context) {
@@ -139,11 +143,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                     ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        _clearDoctorSession().then((_) {
-                          if (mounted) {
-                            context.go('/doctor-auth');
-                          }
-                        });
+                        _handleLogout();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../theme/app_theme.dart';
+import '../services/supabase_auth_service.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
@@ -11,92 +10,66 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
+  final _auth = SupabaseAuthService.instance;
+
   @override
   void initState() {
     super.initState();
-    _checkExistingSessions();
+    _checkExistingSession();
   }
 
-  // Check for existing doctor session
-  Future<void> _checkExistingSessions() async {
-    final prefs = await SharedPreferences.getInstance();
-    final doctorEmail = prefs.getString('doctor_email');
-    final patientMobile = prefs.getString('patient_mobile');
-    final patientLoginTime = prefs.getString('patient_login_time');
-    final loginTime = prefs.getString('login_time');
+  /// If a Supabase session exists, look up the user's role and navigate.
+  Future<void> _checkExistingSession() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
 
-    // Check patient session first
-    if (patientLoginTime != null && patientMobile != null) {
-      try {
-        final loginDateTime = DateTime.parse(patientLoginTime);
-        final now = DateTime.now();
-        final diffInHours = now.difference(loginDateTime).inHours;
+    try {
+      final role = await _auth.getUserRole(user.id);
 
-        // If patient session is still valid (within 8 hours)
-        if (diffInHours < 8) {
-          final patientName = prefs.getString('patient_name') ?? '';
+      if (!mounted) return;
 
-          // Navigate directly to patient home
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              context.go(
-                '/patient',
-                extra: {
-                  'patientName': patientName,
-                  'patientMobile': patientMobile,
-                },
-              );
-            }
-          });
-          return;
-        }
-      } catch (e) {
-        // Invalid timestamp, clear session
-        await prefs.remove('patient_login_time');
-      }
-    }
-
-    // Then check doctor session
-    if (loginTime != null) {
-      try {
-        final loginDateTime = DateTime.parse(loginTime);
-        final now = DateTime.now();
-        final diffInHours = now.difference(loginDateTime).inHours;
-
-        // If session is still valid (within 8 hours) and doctor is logged in
-        if (diffInHours < 8 && doctorEmail != null) {
-          // Get saved doctor data
-          final doctorData = {
-            'email': doctorEmail,
-            'name': prefs.getString('doctor_name') ?? '',
-            'phone': prefs.getString('doctor_phone') ?? '',
-            'specialization': prefs.getString('doctor_specialization') ?? '',
-            'hospital': prefs.getString('doctor_hospital') ?? '',
-            'department': prefs.getString('doctor_department') ?? '',
-            'degree': prefs.getString('doctor_degree') ?? '',
-            'medicalCollege': prefs.getString('doctor_college') ?? '',
-            'license': prefs.getString('doctor_license') ?? '',
-            'profileImage': prefs.getString('doctor_profile_image') ?? '',
+      if (role == 'doctor') {
+        final profile = await _auth.getDoctorProfile(user.id);
+        if (profile != null && mounted) {
+          final doctorData = <String, String>{
+            'name': profile['full_name']?.toString() ?? '',
+            'email': profile['email']?.toString() ?? '',
+            'phone': profile['phone']?.toString() ?? '',
+            'nid': profile['nid']?.toString() ?? '',
+            'license': profile['license']?.toString() ?? '',
+            'specialization': profile['specialization']?.toString() ?? '',
+            'hospital': profile['hospital']?.toString() ?? '',
+            'department': profile['department']?.toString() ?? '',
+            'degree': profile['degree']?.toString() ?? '',
+            'medicalCollege': profile['medical_college']?.toString() ?? '',
+            'location': profile['location']?.toString() ?? 'Dhaka',
+            'description': profile['description']?.toString() ?? '',
+            'consultationFee': profile['consultation_fee']?.toString() ?? '500',
+            'diagnostic': profile['diagnostic']?.toString() ?? 'MediHub Centre',
+            'experience': profile['experience']?.toString() ?? '',
+            'profileImage': profile['profile_image']?.toString() ?? '',
           };
-
-          // Navigate directly to doctor home
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              context.go('/doctor', extra: doctorData);
-            }
-          });
-          return;
+          context.go('/doctor', extra: doctorData);
         }
-      } catch (e) {
-        // Invalid timestamp, clear session
-        await prefs.remove('login_time');
+      } else if (role == 'patient') {
+        final profile = await _auth.getPatientProfile(user.id);
+        if (profile != null && mounted) {
+          context.go(
+            '/patient',
+            extra: {
+              'patientName': profile['full_name'] as String? ?? '',
+              'patientMobile': profile['phone'] as String? ?? '',
+            },
+          );
+        }
       }
+    } catch (_) {
+      // Session invalid or network error – stay on welcome screen
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.current;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(

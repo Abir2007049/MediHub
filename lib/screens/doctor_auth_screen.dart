@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/bmdc_license_verification_service.dart';
+import '../services/supabase_auth_service.dart';
 
 class DoctorAuthScreen extends StatefulWidget {
   const DoctorAuthScreen({Key? key}) : super(key: key);
@@ -11,8 +12,11 @@ class DoctorAuthScreen extends StatefulWidget {
 }
 
 class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
+  final _auth = SupabaseAuthService.instance;
+
   bool _isLogin = true;
-  int _registrationStep = 1; // Step 1 or 2 for registration
+  int _registrationStep = 1;
+  bool _loading = false;
 
   // Login controllers
   late TextEditingController _loginEmailController;
@@ -37,36 +41,6 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
   bool _obscureLoginPassword = true;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-
-  // Demo registered doctors
-  final List<Map<String, String>> _registeredDoctors = [
-    {
-      'name': 'Dr. Adam Max',
-      'email': 'adam@medihub.com',
-      'password': 'doctor123',
-      'phone': '01712345678',
-      'nid': '1234567890123',
-      'license': 'BD123456',
-      'specialization': 'Cardiologist',
-      'hospital': 'Dhaka Medical Hospital',
-      'department': 'Cardiology',
-      'degree': 'MBBS, FCPS',
-      'medicalCollege': 'Dhaka Medical College',
-    },
-    {
-      'name': 'Dr. Sara Khan',
-      'email': 'sara@medihub.com',
-      'password': 'doctor123',
-      'phone': '01898765432',
-      'nid': '9876543210987',
-      'license': 'BD654321',
-      'specialization': 'Dermatologist',
-      'hospital': 'Popular Hospital',
-      'department': 'Dermatology',
-      'degree': 'MBBS, MD',
-      'medicalCollege': 'BSMMU',
-    },
-  ];
 
   @override
   void initState() {
@@ -106,7 +80,9 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
     super.dispose();
   }
 
-  void _handleDoctorLogin() {
+  // ─── Login ─────────────────────────────────────────────────
+
+  Future<void> _handleDoctorLogin() async {
     final email = _loginEmailController.text.trim();
     final password = _loginPasswordController.text.trim();
 
@@ -115,25 +91,45 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
       return;
     }
 
-    final doctor = _registeredDoctors.firstWhere(
-      (doc) => doc['email'] == email && doc['password'] == password,
-      orElse: () => {},
-    );
+    setState(() => _loading = true);
+    try {
+      final response = await _auth.signInDoctor(
+        email: email,
+        password: password,
+      );
 
-    if (doctor.isEmpty) {
-      _showSnackBar('Invalid email or password', Colors.red);
-      return;
-    }
+      final user = response.user;
+      if (user == null) {
+        _showSnackBar('Login failed', Colors.red);
+        return;
+      }
 
-    _showSnackBar('Welcome ${doctor['name']}!', Colors.green);
-    _saveDoctorSession(doctor).then((_) {
-      Future.delayed(const Duration(seconds: 1), () {
+      // Fetch doctor profile from DB
+      final profile = await _auth.getDoctorProfile(user.id);
+
+      if (profile == null) {
+        _showSnackBar('Doctor profile not found', Colors.red);
+        return;
+      }
+
+      final doctorData = _profileToMap(profile);
+
+      _showSnackBar('Welcome ${doctorData['name']}!', Colors.green);
+      Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          context.go('/doctor', extra: doctor);
+          context.go('/doctor', extra: doctorData);
         }
       });
-    });
+    } on AuthException catch (e) {
+      _showSnackBar(e.message, Colors.red);
+    } catch (e) {
+      _showSnackBar('Login failed. Please try again.', Colors.red);
+    } finally {
+      setState(() => _loading = false);
+    }
   }
+
+  // ─── Registration Step 1 ───────────────────────────────────
 
   void _handleRegistrationStep1() {
     final name = _nameController.text.trim();
@@ -161,24 +157,9 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
       return;
     }
 
-    final doctorExists = _registeredDoctors.any((doc) => doc['email'] == email);
-    if (doctorExists) {
-      _showSnackBar('Email already registered', Colors.red);
-      return;
-    }
-
     final bmdcResult = BmdcLicenseVerificationService.verify(license);
     if (!bmdcResult.isValid) {
       _showSnackBar(bmdcResult.message, Colors.red);
-      return;
-    }
-
-    final licenseExists = _registeredDoctors.any(
-      (doc) =>
-          (doc['license'] ?? '').toUpperCase() == bmdcResult.normalizedLicense,
-    );
-    if (licenseExists) {
-      _showSnackBar('This BMDC license is already registered.', Colors.red);
       return;
     }
 
@@ -190,12 +171,12 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
     _showSnackBar('BMDC license verified. Proceed to step 2', Colors.green);
   }
 
-  void _handleRegistrationStep2() {
+  // ─── Registration Step 2 ───────────────────────────────────
+
+  Future<void> _handleRegistrationStep2() async {
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
     final specialization = _specializationController.text.trim();
-    final hospital = _hospitalController.text.trim();
-    final department = _departmentController.text.trim();
     final degree = _degreeController.text.trim();
     final medicalCollege = _medicalCollegeController.text.trim();
 
@@ -204,7 +185,7 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
         specialization.isEmpty ||
         degree.isEmpty ||
         medicalCollege.isEmpty) {
-      _showSnackBar('Please fill all fields', Colors.red);
+      _showSnackBar('Please fill all required fields', Colors.red);
       return;
     }
 
@@ -218,29 +199,85 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
       return;
     }
 
-    // Register new doctor
-    _registeredDoctors.add({
-      'name': _nameController.text.trim(),
-      'email': _emailController.text.trim(),
-      'password': password,
-      'phone': _phoneController.text.trim(),
-      'nid': _nidController.text.trim(),
-      'license': _licenseController.text.trim(),
-      'specialization': specialization,
-      'hospital': hospital,
-      'department': department,
-      'degree': degree,
-      'medicalCollege': medicalCollege,
-    });
+    setState(() => _loading = true);
+    try {
+      // 1. Create auth user
+      final response = await _auth.signUpDoctor(
+        email: _emailController.text.trim(),
+        password: password,
+      );
 
-    _showSnackBar('Account created successfully! Please login.', Colors.green);
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _isLogin = true;
-        _registrationStep = 1;
-        _clearControllers();
+      final user = response.user;
+      if (user == null) {
+        _showSnackBar('Registration failed', Colors.red);
+        return;
+      }
+
+      // 2. Create doctor profile row in DB
+      await _auth.createDoctorProfile(
+        userId: user.id,
+        fullName: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        nid: _nidController.text.trim(),
+        license: _licenseController.text.trim(),
+        specialization: specialization,
+        hospital: _hospitalController.text.trim(),
+        department: _departmentController.text.trim(),
+        degree: degree,
+        medicalCollege: medicalCollege,
+      );
+
+      _showSnackBar(
+        'Account created! Check your email to confirm, then login.',
+        Colors.green,
+      );
+
+      // Sign out so they can confirm email and login fresh
+      await _auth.signOut();
+
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _isLogin = true;
+            _registrationStep = 1;
+            _clearControllers();
+          });
+        }
       });
-    });
+    } on AuthException catch (e) {
+      _showSnackBar(e.message, Colors.red);
+    } on PostgrestException catch (e) {
+      _showSnackBar(e.message, Colors.red);
+    } catch (e) {
+      _showSnackBar('Registration failed. Please try again.', Colors.red);
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  // ─── Helpers ───────────────────────────────────────────────
+
+  /// Convert a Supabase row into the Map<String, String> the app expects.
+  Map<String, String> _profileToMap(Map<String, dynamic> profile) {
+    return {
+      'name': profile['full_name']?.toString() ?? '',
+      'email': profile['email']?.toString() ?? '',
+      'phone': profile['phone']?.toString() ?? '',
+      'nid': profile['nid']?.toString() ?? '',
+      'license': profile['license']?.toString() ?? '',
+      'specialization': profile['specialization']?.toString() ?? '',
+      'hospital': profile['hospital']?.toString() ?? '',
+      'department': profile['department']?.toString() ?? '',
+      'degree': profile['degree']?.toString() ?? '',
+      'medicalCollege': profile['medical_college']?.toString() ?? '',
+      'location': profile['location']?.toString() ?? 'Dhaka',
+      'description': profile['description']?.toString() ?? '',
+      'consultationFee': profile['consultation_fee']?.toString() ?? '500',
+      'diagnostic': profile['diagnostic']?.toString() ?? 'MediHub Centre',
+      'experience': profile['experience']?.toString() ?? '',
+      'profileImage': profile['profile_image']?.toString() ?? '',
+    };
   }
 
   void _clearControllers() {
@@ -268,74 +305,6 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
         duration: const Duration(seconds: 2),
       ),
     );
-  }
-
-  // Save doctor session
-  Future<void> _saveDoctorSession(Map<String, String> doctorData) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('doctor_email', doctorData['email'] ?? '');
-    await prefs.setString('doctor_name', doctorData['name'] ?? '');
-    await prefs.setString('doctor_phone', doctorData['phone'] ?? '');
-    await prefs.setString(
-      'doctor_specialization',
-      doctorData['specialization'] ?? '',
-    );
-    await prefs.setString('doctor_hospital', doctorData['hospital'] ?? '');
-    await prefs.setString('doctor_department', doctorData['department'] ?? '');
-    await prefs.setString('doctor_degree', doctorData['degree'] ?? '');
-    await prefs.setString('doctor_college', doctorData['medicalCollege'] ?? '');
-    await prefs.setString('login_time', DateTime.now().toIso8601String());
-  }
-
-  // Check if session is still valid (8 hours)
-  Future<bool> _isSessionValid() async {
-    final prefs = await SharedPreferences.getInstance();
-    final loginTimeStr = prefs.getString('login_time');
-
-    if (loginTimeStr == null) return false;
-
-    try {
-      final loginTime = DateTime.parse(loginTimeStr);
-      final now = DateTime.now();
-      final diffInHours = now.difference(loginTime).inHours;
-
-      return diffInHours < 8;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Clear doctor session
-  Future<void> _clearDoctorSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('doctor_email');
-    await prefs.remove('doctor_name');
-    await prefs.remove('doctor_phone');
-    await prefs.remove('doctor_specialization');
-    await prefs.remove('doctor_hospital');
-    await prefs.remove('doctor_department');
-    await prefs.remove('doctor_degree');
-    await prefs.remove('doctor_college');
-    await prefs.remove('login_time');
-  }
-
-  // Get saved doctor data from session
-  Future<Map<String, String>?> _getSavedDoctorSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('doctor_email');
-
-    if (email == null) return null;
-
-    return {
-      'email': email,
-      'name': prefs.getString('doctor_name') ?? '',
-      'phone': prefs.getString('doctor_phone') ?? '',
-      'specialization': prefs.getString('doctor_specialization') ?? '',
-      'hospital': prefs.getString('doctor_hospital') ?? '',
-      'department': prefs.getString('doctor_department') ?? '',
-      'degree': prefs.getString('doctor_degree') ?? '',
-      'medicalCollege': prefs.getString('doctor_college') ?? '',
-    };
   }
 
   @override
@@ -577,7 +546,7 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: _handleDoctorLogin,
+                    onPressed: _loading ? null : _handleDoctorLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -587,21 +556,30 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                       minimumSize: const Size(double.infinity, 56),
                       elevation: 4,
                     ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.arrow_forward, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text(
-                          'Login',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                    child: _loading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.arrow_forward, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                'Login',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ] else ...[
                   // Registration Form
@@ -750,7 +728,9 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                         Expanded(
                           flex: 2,
                           child: ElevatedButton(
-                            onPressed: _handleRegistrationStep2,
+                            onPressed: _loading
+                                ? null
+                                : _handleRegistrationStep2,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -758,21 +738,33 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Create Account',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                            child: _loading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Create Account',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      SizedBox(width: 8),
+                                      Icon(
+                                        Icons.check_circle,
+                                        color: Colors.white,
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                SizedBox(width: 8),
-                                Icon(Icons.check_circle, color: Colors.white),
-                              ],
-                            ),
                           ),
                         ),
                       ],
@@ -780,47 +772,6 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                   ],
                 ],
                 const SizedBox(height: 24),
-
-                // Demo Credentials Info
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info,
-                            color: Colors.green.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Demo Credentials',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green.shade900,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Email: adam@medihub.com\nPassword: doctor123\n\nEmail: sara@medihub.com\nPassword: doctor123',
-                        style: TextStyle(
-                          color: Colors.green.shade700,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),

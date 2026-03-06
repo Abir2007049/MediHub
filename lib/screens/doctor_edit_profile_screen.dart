@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
+import '../services/supabase_auth_service.dart';
 
 class DoctorEditProfileScreen extends StatefulWidget {
   final Map<String, String> doctorData;
@@ -143,49 +143,37 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
     }
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Update doctor session data
-      await prefs.setString('doctor_name', _nameController.text.trim());
-      await prefs.setString(
-        'doctor_specialization',
-        _specializationController.text.trim(),
-      );
-      await prefs.setString('doctor_degree', _degreeController.text.trim());
-      await prefs.setString(
-        'doctor_college',
-        _medicalCollegeController.text.trim(),
-      );
-      await prefs.setString('doctor_hospital', _hospitalController.text.trim());
-      await prefs.setString(
-        'doctor_department',
-        _departmentController.text.trim(),
-      );
-
-      // Save additional profile fields (as JSON or separate entries)
-      await prefs.setString('doctor_location', _locationController.text.trim());
-      await prefs.setString(
-        'doctor_description',
-        _descriptionController.text.trim(),
-      );
-      await prefs.setString(
-        'doctor_consultation_fee',
-        _consultationFeeController.text.trim(),
-      );
-      await prefs.setString(
-        'doctor_diagnostic',
-        _diagnosticController.text.trim(),
-      );
-      await prefs.setString('doctor_license', _licenseController.text.trim());
-      await prefs.setString(
-        'doctor_experience',
-        _experienceController.text.trim(),
-      );
-
-      // Save profile image path
-      if (_profileImagePath != null) {
-        await prefs.setString('doctor_profile_image', _profileImagePath!);
+      final auth = SupabaseAuthService.instance;
+      final user = auth.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Not logged in'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
       }
+
+      await auth.updateDoctorProfile(
+        userId: user.id,
+        data: {
+          'full_name': _nameController.text.trim(),
+          'specialization': _specializationController.text.trim(),
+          'degree': _degreeController.text.trim(),
+          'medical_college': _medicalCollegeController.text.trim(),
+          'hospital': _hospitalController.text.trim(),
+          'department': _departmentController.text.trim(),
+          'location': _locationController.text.trim(),
+          'description': _descriptionController.text.trim(),
+          'consultation_fee':
+              int.tryParse(_consultationFeeController.text.trim()) ?? 500,
+          'diagnostic': _diagnosticController.text.trim(),
+          'license': _licenseController.text.trim(),
+          'experience': _experienceController.text.trim(),
+          if (_profileImagePath != null) 'profile_image': _profileImagePath,
+        },
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

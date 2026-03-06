@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/supabase_auth_service.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   final String? patientName;
@@ -75,10 +75,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   }
 
   Future<void> _clearPatientSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('patient_mobile');
-    await prefs.remove('patient_name');
-    await prefs.remove('patient_login_time');
+    await SupabaseAuthService.instance.signOut();
   }
 
   @override
