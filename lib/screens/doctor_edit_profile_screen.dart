@@ -1,14 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import '../services/supabase_auth_service.dart';
+import '../blocs/doctor_profile/doctor_profile_cubit.dart';
+import '../blocs/doctor_profile/doctor_profile_state.dart';
+import '../models/doctor_profile.dart';
 
 class DoctorEditProfileScreen extends StatefulWidget {
-  final Map<String, String> doctorData;
-
-  const DoctorEditProfileScreen({Key? key, required this.doctorData})
-    : super(key: key);
+  const DoctorEditProfileScreen({Key? key}) : super(key: key);
 
   @override
   State<DoctorEditProfileScreen> createState() =>
@@ -31,63 +31,48 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
 
   String? _profileImagePath;
   final ImagePicker _picker = ImagePicker();
+  bool _initialized = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(
-      text: widget.doctorData['name'] ?? '',
-    );
+  void _initFromProfile(DoctorProfile p) {
+    if (_initialized) return;
+    _initialized = true;
+    _nameController = TextEditingController(text: p.fullName);
     _specializationController = TextEditingController(
-      text: widget.doctorData['specialization'] ?? '',
+      text: p.specialization ?? '',
     );
-    _degreeController = TextEditingController(
-      text: widget.doctorData['degree'] ?? '',
-    );
+    _degreeController = TextEditingController(text: p.degree ?? '');
     _medicalCollegeController = TextEditingController(
-      text: widget.doctorData['medicalCollege'] ?? '',
+      text: p.medicalCollege ?? '',
     );
-    _hospitalController = TextEditingController(
-      text: widget.doctorData['hospital'] ?? '',
-    );
-    _departmentController = TextEditingController(
-      text: widget.doctorData['department'] ?? '',
-    );
-    _locationController = TextEditingController(
-      text: widget.doctorData['location'] ?? '',
-    );
-    _descriptionController = TextEditingController(
-      text: widget.doctorData['description'] ?? '',
-    );
+    _hospitalController = TextEditingController(text: p.hospital ?? '');
+    _departmentController = TextEditingController(text: p.department ?? '');
+    _locationController = TextEditingController(text: p.location);
+    _descriptionController = TextEditingController(text: p.description ?? '');
     _consultationFeeController = TextEditingController(
-      text: widget.doctorData['consultationFee'] ?? '500',
+      text: p.consultationFee.toString(),
     );
-    _diagnosticController = TextEditingController(
-      text: widget.doctorData['diagnostic'] ?? '',
-    );
-    _licenseController = TextEditingController(
-      text: widget.doctorData['license'] ?? '',
-    );
-    _experienceController = TextEditingController(
-      text: widget.doctorData['experience'] ?? '12',
-    );
-    _profileImagePath = widget.doctorData['profileImage'];
+    _diagnosticController = TextEditingController(text: p.diagnostic);
+    _licenseController = TextEditingController(text: p.license ?? '');
+    _experienceController = TextEditingController(text: p.experience ?? '');
+    _profileImagePath = p.profileImage;
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _specializationController.dispose();
-    _degreeController.dispose();
-    _medicalCollegeController.dispose();
-    _hospitalController.dispose();
-    _departmentController.dispose();
-    _locationController.dispose();
-    _descriptionController.dispose();
-    _consultationFeeController.dispose();
-    _diagnosticController.dispose();
-    _licenseController.dispose();
-    _experienceController.dispose();
+    if (_initialized) {
+      _nameController.dispose();
+      _specializationController.dispose();
+      _degreeController.dispose();
+      _medicalCollegeController.dispose();
+      _hospitalController.dispose();
+      _departmentController.dispose();
+      _locationController.dispose();
+      _descriptionController.dispose();
+      _consultationFeeController.dispose();
+      _diagnosticController.dispose();
+      _licenseController.dispose();
+      _experienceController.dispose();
+    }
     super.dispose();
   }
 
@@ -99,11 +84,8 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
         maxHeight: 512,
         imageQuality: 85,
       );
-
       if (image != null) {
-        setState(() {
-          _profileImagePath = image.path;
-        });
+        setState(() => _profileImagePath = image.path);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -131,7 +113,6 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
       return;
     }
 
-    // Validate consultation fee is a number
     if (int.tryParse(_consultationFeeController.text.trim()) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -142,61 +123,71 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
       return;
     }
 
-    try {
-      final auth = SupabaseAuthService.instance;
-      final user = auth.currentUser;
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Not logged in'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
+    final cubit = context.read<DoctorProfileCubit>();
+    await cubit.updateProfile({
+      'full_name': _nameController.text.trim(),
+      'specialization': _specializationController.text.trim(),
+      'degree': _degreeController.text.trim(),
+      'medical_college': _medicalCollegeController.text.trim(),
+      'hospital': _hospitalController.text.trim(),
+      'department': _departmentController.text.trim(),
+      'location': _locationController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'consultation_fee':
+          int.tryParse(_consultationFeeController.text.trim()) ?? 500,
+      'diagnostic': _diagnosticController.text.trim(),
+      'license': _licenseController.text.trim(),
+      'experience': _experienceController.text.trim(),
+      if (_profileImagePath != null) 'profile_image': _profileImagePath,
+    });
 
-      await auth.updateDoctorProfile(
-        userId: user.id,
-        data: {
-          'full_name': _nameController.text.trim(),
-          'specialization': _specializationController.text.trim(),
-          'degree': _degreeController.text.trim(),
-          'medical_college': _medicalCollegeController.text.trim(),
-          'hospital': _hospitalController.text.trim(),
-          'department': _departmentController.text.trim(),
-          'location': _locationController.text.trim(),
-          'description': _descriptionController.text.trim(),
-          'consultation_fee':
-              int.tryParse(_consultationFeeController.text.trim()) ?? 500,
-          'diagnostic': _diagnosticController.text.trim(),
-          'license': _licenseController.text.trim(),
-          'experience': _experienceController.text.trim(),
-          if (_profileImagePath != null) 'profile_image': _profileImagePath,
-        },
-      );
-
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile updated successfully!'),
           backgroundColor: Colors.green,
         ),
       );
-
       Future.delayed(const Duration(seconds: 1), () {
-        context.pop(true); // Return true to indicate data was updated
+        if (mounted) context.pop(true);
       });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving profile: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    return BlocBuilder<DoctorProfileCubit, DoctorProfileState>(
+      builder: (context, state) {
+        final profile = state is DoctorProfileLoaded
+            ? state.profile
+            : state is DoctorProfileSaved
+            ? state.profile
+            : state is DoctorProfileSaving
+            ? _currentProfileFromControllers()
+            : null;
+
+        if (profile == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Edit Profile')),
+            body: const Center(
+              child: CircularProgressIndicator(color: Colors.green),
+            ),
+          );
+        }
+
+        _initFromProfile(profile);
+        return _buildForm();
+      },
+    );
+  }
+
+  DoctorProfile? _currentProfileFromControllers() {
+    if (!_initialized) return null;
+    // Return a temporary profile from controllers for display during save
+    return null;
+  }
+
+  Widget _buildForm() {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -214,7 +205,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile Picture Section
+            // Profile Picture
             Center(
               child: Column(
                 children: [
@@ -233,13 +224,11 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
                               child: Image.file(
                                 File(_profileImagePath!),
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: Colors.grey.shade400,
-                                  );
-                                },
+                                errorBuilder: (_, __, ___) => Icon(
+                                  Icons.person,
+                                  size: 60,
+                                  color: Colors.grey.shade400,
+                                ),
                               ),
                             )
                           : Icon(
@@ -267,15 +256,8 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Personal Information Section
-            Text(
-              'Personal Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
+            // Personal Information
+            _sectionTitle('Personal Information'),
             const SizedBox(height: 16),
             _buildTextField(
               'Full Name',
@@ -293,14 +275,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
             const SizedBox(height: 24),
 
             // Professional Qualifications
-            Text(
-              'Professional Qualifications',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
+            _sectionTitle('Professional Qualifications'),
             const SizedBox(height: 16),
             _buildTextField(
               'Degree',
@@ -325,14 +300,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
             const SizedBox(height: 24),
 
             // Work Information
-            Text(
-              'Work Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
+            _sectionTitle('Work Information'),
             const SizedBox(height: 16),
             _buildTextField(
               'Hospital/Diagnostic Centre',
@@ -372,14 +340,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
             const SizedBox(height: 24),
 
             // Services
-            Text(
-              'Services & Fees',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
+            _sectionTitle('Services & Fees'),
             const SizedBox(height: 16),
             _buildTextField(
               'Consultation Fee (৳)',
@@ -390,15 +351,8 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
             ),
             const SizedBox(height: 24),
 
-            // About Section
-            Text(
-              'About You',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
+            // About
+            _sectionTitle('About You'),
             const SizedBox(height: 16),
             TextField(
               controller: _descriptionController,
@@ -455,8 +409,6 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Cancel Button
             OutlinedButton(
               onPressed: () => context.pop(),
               style: OutlinedButton.styleFrom(
@@ -476,6 +428,17 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
             const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: Colors.grey.shade800,
       ),
     );
   }

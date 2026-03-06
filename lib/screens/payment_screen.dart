@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import '../blocs/auth/auth_cubit.dart';
+import '../blocs/auth/auth_state.dart';
+import '../blocs/booking/booking_cubit.dart';
+import '../blocs/booking/booking_state.dart';
+import '../models/doctor_profile.dart';
 
 class PaymentScreen extends StatefulWidget {
-  final Map<String, dynamic> doctor;
+  final DoctorProfile doctor;
   final String selectedDay;
   final int selectedSerialNumber;
   final String? approximateTime;
@@ -22,552 +26,414 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  String? _selectedPaymentMethod;
-  final TextEditingController _accountNumberController =
-      TextEditingController();
-  final TextEditingController _cardNumberController = TextEditingController();
-  final TextEditingController _cvvController = TextEditingController();
-  final TextEditingController _expiryController = TextEditingController();
-
-  // Demo consultation fee - will come from backend
-  late final double _consultationFee;
-
-  @override
-  void initState() {
-    super.initState();
-    _consultationFee = (widget.doctor['consultationFee'] ?? 500).toDouble();
-  }
-
-  final List<Map<String, dynamic>> _paymentMethods = [
-    {
-      'name': 'bKash',
-      'icon': Icons.account_balance_wallet,
-      'color': Colors.pink,
-      'gradient': [Color(0xFFE91E63), Color(0xFFC2185B)],
-    },
-    {
-      'name': 'Nagad',
-      'icon': Icons.payment,
-      'color': Colors.orange,
-      'gradient': [Color(0xFFFF6F00), Color(0xFFE65100)],
-    },
-    {
-      'name': 'Rocket',
-      'icon': Icons.rocket_launch,
-      'color': Colors.purple,
-      'gradient': [Color(0xFF7B1FA2), Color(0xFF6A1B9A)],
-    },
-    {
-      'name': 'Debit Card',
-      'icon': Icons.credit_card,
-      'color': Colors.blue,
-      'gradient': [Color(0xFF1976D2), Color(0xFF1565C0)],
-    },
-  ];
+  String _paymentMethod = 'bkash';
+  final _accountController = TextEditingController();
+  bool _confirmed = false;
 
   @override
   void dispose() {
-    _accountNumberController.dispose();
-    _cardNumberController.dispose();
-    _cvvController.dispose();
-    _expiryController.dispose();
+    _accountController.dispose();
     super.dispose();
   }
 
-  Future<void> _saveAppointmentHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final patientMobile = prefs.getString('patient_mobile') ?? '';
-    final patientName = prefs.getString('patient_name') ?? 'Patient';
-    final doctorEmail = widget.doctor['email'] ?? '';
+  void _handleConfirm() {
+    final authState = context.read<AuthCubit>().state;
+    String? patientId;
+    String? patientName;
+    String? patientMobile;
 
-    // Create appointment object
-    final appointment = {
-      'timestamp': DateTime.now().toIso8601String(),
-      'selectedDay': widget.selectedDay,
-      'serialNumber': widget.selectedSerialNumber,
-      'approximateTime': widget.approximateTime ?? 'N/A',
-      'consultationFee': _consultationFee,
-      'paymentMethod': _selectedPaymentMethod,
-      'patientMobile': patientMobile,
-      'patientName': patientName,
-      'doctorName': widget.doctor['name'] ?? 'Doctor',
-      'doctorEmail': doctorEmail,
-      'specialization': widget.doctor['specialization'] ?? 'Specialist',
-      'location': widget.doctor['location'] ?? 'N/A',
-    };
-
-    // Save to patient history
-    final patientHistoryJson = prefs.getString(
-      'patient_history_$patientMobile',
-    );
-    List<dynamic> patientHistory = patientHistoryJson != null
-        ? jsonDecode(patientHistoryJson)
-        : [];
-    patientHistory.add(appointment);
-    await prefs.setString(
-      'patient_history_$patientMobile',
-      jsonEncode(patientHistory),
-    );
-
-    // Save to doctor history
-    if (doctorEmail.isNotEmpty) {
-      final doctorHistoryJson = prefs.getString('doctor_history_$doctorEmail');
-      List<dynamic> doctorHistory = doctorHistoryJson != null
-          ? jsonDecode(doctorHistoryJson)
-          : [];
-      doctorHistory.add(appointment);
-      await prefs.setString(
-        'doctor_history_$doctorEmail',
-        jsonEncode(doctorHistory),
-      );
+    if (authState is AuthenticatedAsPatient) {
+      patientId = authState.profile.id;
+      patientName = authState.profile.fullName;
+      patientMobile = authState.profile.phone;
+    } else {
+      patientId = context.read<AuthCubit>().currentUserId;
     }
-  }
 
-  void _processPayment() {
-    if (_selectedPaymentMethod == null) {
+    if (patientId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a payment method'),
+          content: Text('Not authenticated'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    // Validate input based on payment method
-    if (_selectedPaymentMethod == 'Debit Card') {
-      if (_cardNumberController.text.isEmpty ||
-          _cvvController.text.isEmpty ||
-          _expiryController.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please fill all card details'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-    } else {
-      if (_accountNumberController.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enter your account number'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-    }
+    final d = widget.doctor;
 
-    // Show processing dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Processing payment...'),
-              ],
-            ),
-          ),
-        ),
-      ),
+    context.read<BookingCubit>().confirmBooking(
+      patientId: patientId,
+      doctorId: d.id,
+      patientName: patientName,
+      patientMobile: patientMobile,
+      doctorName: d.fullName,
+      specialization: d.specialization,
+      location: d.location,
+      selectedDay: widget.selectedDay,
+      serialNumber: widget.selectedSerialNumber,
+      approximateTime: widget.approximateTime,
+      consultationFee: d.consultationFee,
+      paymentMethod: _paymentMethod,
     );
-
-    // Simulate payment processing
-    Future.delayed(const Duration(seconds: 2), () async {
-      Navigator.pop(context); // Close processing dialog
-
-      // Save appointment to history
-      await _saveAppointmentHistory();
-
-      // Show success dialog
-      showDialog(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Row(
-            children: const [
-              Icon(Icons.check_circle, color: Colors.green, size: 30),
-              SizedBox(width: 8),
-              Text('Payment Successful!'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Doctor: ${widget.doctor['name']}'),
-              Text('Qualification: ${widget.doctor['degree'] ?? 'MBBS'}'),
-              Text(
-                'Medical College: ${widget.doctor['medicalCollege'] ?? 'Medical College'}',
-              ),
-              const SizedBox(height: 8),
-              Text('Day: ${widget.selectedDay}'),
-              Text('Serial Number: #${widget.selectedSerialNumber}'),
-              if (widget.approximateTime != null)
-                Text('Approximate Time: ${widget.approximateTime}'),
-              const Divider(),
-              Text(
-                'Consultation Fee: ৳${_consultationFee.toStringAsFixed(2)}/appointment',
-              ),
-              Text('Method: $_selectedPaymentMethod'),
-              const SizedBox(height: 8),
-              const Text(
-                'Your appointment has been confirmed!',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            OutlinedButton.icon(
-              onPressed: () async {
-                Navigator.pop(dialogContext); // Close success dialog
-                final prefs = await SharedPreferences.getInstance();
-                final patientMobile = prefs.getString('patient_mobile') ?? '';
-
-                if (!context.mounted) return;
-                context.push('/patient/history', extra: patientMobile);
-              },
-              icon: const Icon(Icons.history),
-              label: const Text('Go to History'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.green,
-                side: const BorderSide(color: Colors.green),
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(dialogContext); // Close success dialog
-                final prefs = await SharedPreferences.getInstance();
-                final patientMobile = prefs.getString('patient_mobile') ?? '';
-                final patientName = prefs.getString('patient_name') ?? '';
-                if (!context.mounted) return;
-                context.go(
-                  '/patient',
-                  extra: {
-                    'patientName': patientName,
-                    'patientMobile': patientMobile,
-                  },
-                );
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: const Text('Done'),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  Widget _buildPaymentMethodCard(Map<String, dynamic> method) {
-    final isSelected = _selectedPaymentMethod == method['name'];
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedPaymentMethod = method['name'];
-        });
-      },
-      child: Container(
-        height: 100,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: method['gradient'],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? Colors.white : Colors.transparent,
-            width: 3,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: method['color'].withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(method['icon'], color: Colors.white, size: 40),
-                  const SizedBox(height: 8),
-                  Text(
-                    method['name'],
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              const Positioned(
-                top: 8,
-                right: 8,
-                child: Icon(Icons.check_circle, color: Colors.white, size: 24),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentForm() {
-    if (_selectedPaymentMethod == null) return const SizedBox.shrink();
-
-    if (_selectedPaymentMethod == 'Debit Card') {
-      return Column(
-        children: [
-          TextField(
-            controller: _cardNumberController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Card Number',
-              hintText: '1234 5678 9012 3456',
-              prefixIcon: const Icon(Icons.credit_card),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _expiryController,
-                  keyboardType: TextInputType.datetime,
-                  decoration: InputDecoration(
-                    labelText: 'Expiry Date',
-                    hintText: 'MM/YY',
-                    prefixIcon: const Icon(Icons.calendar_today),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _cvvController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'CVV',
-                    hintText: '123',
-                    prefixIcon: const Icon(Icons.lock),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
-    } else {
-      return TextField(
-        controller: _accountNumberController,
-        keyboardType: TextInputType.phone,
-        decoration: InputDecoration(
-          labelText: '$_selectedPaymentMethod Account Number',
-          hintText: '01XXXXXXXXX',
-          prefixIcon: const Icon(Icons.phone),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payment'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+    final d = widget.doctor;
+
+    return BlocListener<BookingCubit, BookingState>(
+      listener: (context, state) {
+        if (state is BookingConfirmed) {
+          setState(() => _confirmed = true);
+        } else if (state is BookingError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        appBar: AppBar(
+          title: const Text('Payment'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.green.shade700,
+          elevation: 0,
+        ),
+        body: _confirmed ? _buildSuccess() : _buildPaymentForm(d),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+    );
+  }
+
+  // ── Success state ──
+  Widget _buildSuccess() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.check_circle,
+                size: 80,
+                color: Colors.green.shade600,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Booking Confirmed!',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Serial #${widget.selectedSerialNumber} on ${widget.selectedDay}',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+            if (widget.approximateTime != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Approximate time: ${widget.approximateTime}',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+              ),
+            ],
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.go('/patient'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text(
+                  'Go to Home',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Payment form ──
+  Widget _buildPaymentForm(DoctorProfile d) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Appointment Summary Card
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
+            // Booking summary
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Appointment Summary',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Booking Summary',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  _summaryRow('Doctor', d.fullName),
+                  _summaryRow('Specialization', d.specialization ?? ''),
+                  _summaryRow('Day', widget.selectedDay),
+                  _summaryRow('Serial', '#${widget.selectedSerialNumber}'),
+                  if (widget.approximateTime != null)
+                    _summaryRow('Time', widget.approximateTime!),
+                  _summaryRow('Location', d.location),
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Total',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const Divider(),
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundImage: widget.doctor['image'] != null
-                              ? NetworkImage(widget.doctor['image'])
-                              : null,
-                          radius: 30,
-                          backgroundColor: Colors.green.shade100,
+                      Text(
+                        '৳${d.consultationFee}',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade700,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.doctor['name'] ?? 'Doctor',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(widget.doctor['specialization'] ?? ''),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Day:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(widget.selectedDay),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Serial Number:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text('#${widget.selectedSerialNumber}'),
-                      ],
-                    ),
-                    if (widget.approximateTime != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Approximate Time:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(widget.approximateTime!),
-                        ],
                       ),
                     ],
-                    const Divider(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Consultation Fee:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '৳${_consultationFee.toStringAsFixed(2)}/appointment',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Payment Methods
-            const Text(
-              'Select Payment Method',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.5,
-              ),
-              itemCount: _paymentMethods.length,
-              itemBuilder: (context, index) {
-                return _buildPaymentMethodCard(_paymentMethods[index]);
-              },
-            ),
-            const SizedBox(height: 24),
-            // Payment Form
-            _buildPaymentForm(),
-            const SizedBox(height: 24),
-            // Pay Button
-            ElevatedButton(
-              onPressed: _processPayment,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.payment, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Pay ৳${_consultationFee.toStringAsFixed(2)}/appointment',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+
+            // Payment method
+            Text(
+              'Payment Method',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildPaymentOption(
+              'bkash',
+              'bKash',
+              Icons.phone_android,
+              Colors.pink.shade600,
+            ),
+            _buildPaymentOption(
+              'nagad',
+              'Nagad',
+              Icons.phone_android,
+              Colors.orange.shade700,
+            ),
+            _buildPaymentOption(
+              'rocket',
+              'Rocket',
+              Icons.phone_android,
+              Colors.purple,
+            ),
+            _buildPaymentOption(
+              'card',
+              'Credit/Debit Card',
+              Icons.credit_card,
+              Colors.blue,
+            ),
+            _buildPaymentOption(
+              'cash',
+              'Cash on Visit',
+              Icons.payments_outlined,
+              Colors.green,
+            ),
+            const SizedBox(height: 16),
+
+            // Account/card input (if not cash)
+            if (_paymentMethod != 'cash') ...[
+              TextField(
+                controller: _accountController,
+                decoration: InputDecoration(
+                  labelText: _paymentMethod == 'card'
+                      ? 'Card Number'
+                      : 'Account Number',
+                  prefixIcon: Icon(
+                    _paymentMethod == 'card' ? Icons.credit_card : Icons.phone,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            // Confirm button
+            BlocBuilder<BookingCubit, BookingState>(
+              builder: (context, state) {
+                final isLoading = state is BookingConfirming;
+                return SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : _handleConfirm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 4,
+                    ),
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Confirm Payment  •  ৳${d.consultationFee}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                );
+              },
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentOption(
+    String value,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
+    final isSelected = _paymentMethod == value;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => setState(() => _paymentMethod = value),
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.green.shade50 : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected
+                    ? Colors.green.shade600
+                    : Colors.grey.shade200,
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: color, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected
+                        ? Colors.green.shade700
+                        : Colors.grey.shade700,
+                  ),
+                ),
+                const Spacer(),
+                if (isSelected)
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.green.shade600,
+                    size: 24,
+                  )
+                else
+                  Icon(
+                    Icons.radio_button_unchecked,
+                    color: Colors.grey.shade400,
+                    size: 24,
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

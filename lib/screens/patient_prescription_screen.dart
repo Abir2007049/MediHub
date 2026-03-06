@@ -1,15 +1,15 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../blocs/prescription/prescription_cubit.dart';
+import '../models/appointment.dart';
+import '../models/prescription.dart';
 
 class PatientPrescriptionScreen extends StatefulWidget {
-  final Map<String, dynamic> prescription;
-  final Map<String, dynamic> appointment;
+  final Prescription prescription;
+  final Appointment appointment;
 
   const PatientPrescriptionScreen({
     Key? key,
@@ -18,137 +18,57 @@ class PatientPrescriptionScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<PatientPrescriptionScreen> createState() => _PatientPrescriptionScreenState();
+  State<PatientPrescriptionScreen> createState() =>
+      _PatientPrescriptionScreenState();
 }
 
 class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
-  bool _followUpBooked = false;
+  late Prescription _prescription;
 
   @override
   void initState() {
     super.initState();
-    _loadFollowUpStatus();
+    _prescription = widget.prescription;
   }
 
-  Future<void> _loadFollowUpStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final timestamp = widget.appointment['timestamp'] ?? '';
-    final key = 'followup_booked_$timestamp';
-    setState(() {
-      _followUpBooked = prefs.getBool(key) ?? false;
-    });
-  }
+  Future<void> _bookFollowUp() async {
+    if (_prescription.id == null) return;
 
-  Future<void> _bookFollowUp(String paymentMethod) async {
-    final prefs = await SharedPreferences.getInstance();
-    final timestamp = widget.appointment['timestamp'] ?? '';
-    final key = 'followup_booked_$timestamp';
-    await prefs.setBool(key, true);
-    
+    await context.read<PrescriptionCubit>().markFollowUpBooked(
+      _prescription.id!,
+    );
+
     setState(() {
-      _followUpBooked = true;
+      _prescription = _prescription.copyWith(followUpBooked: true);
     });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Follow-up appointment booked! Payment: $paymentMethod'),
-          backgroundColor: Colors.green.shade600,
-          duration: const Duration(seconds: 3),
+        const SnackBar(
+          content: Text('Follow-up booked!'),
+          backgroundColor: Colors.green,
         ),
       );
     }
   }
 
-  void _showFollowUpSheet(BuildContext context) {
-    final fee = widget.prescription['followUpFee'] ?? 0;
-    
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.payment, color: Colors.green.shade600),
-                const SizedBox(width: 12),
-const Text(
-                  'Select Payment Method',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text('Follow-up Fee: ৳$fee',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
-            const Divider(height: 24),
-            _paymentOption(ctx, 'Bkash', Icons.phone_android, Colors.pink),
-            _paymentOption(ctx, 'Nagad', Icons.phone_android, Colors.orange),
-            _paymentOption(ctx, 'Rocket', Icons.phone_android, Colors.purple),
-            _paymentOption(ctx, 'Cash', Icons.money, Colors.green),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
+  Future<void> _downloadPdf() async {
+    final doc = pw.Document();
+    final p = _prescription;
+    final a = widget.appointment;
 
-  Widget _paymentOption(
-      BuildContext ctx, String method, IconData icon, Color color) {
-    return InkWell(
-      onTap: () {
-        Navigator.pop(ctx);
-        _bookFollowUp(method);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 14),
-            Text(method,
-                style:
-                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-  // ── PDF generation ─────────────────────────────────────────────────────────
-  Future<pw.Document> _buildPdf() async {
-    final pdf = pw.Document();
-    final medicines = (widget.prescription['medicines'] as List? ?? [])
-        .map((e) => Map<String, String>.from(e))
-        .toList();
-    final tests = List<String>.from(widget.prescription['tests'] ?? []);
-    final notes = widget.prescription['notes'] ?? '';
-    final hasFollowUp = widget.prescription['hasFollowUp'] == true;
-    final dateStr = DateFormat('dd MMM yyyy').format(DateTime.parse(widget.appointment['timestamp']));
-
-    pdf.addPage(
+    doc.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(36),
-        build: (ctx) => [
-          // ── Header ──────────────────────────────────────────────────
+        margin: const pw.EdgeInsets.all(40),
+        build: (context) => [
+          // Header
           pw.Container(
-            padding: const pw.EdgeInsets.all(18),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.green700,
-              borderRadius: pw.BorderRadius.circular(10),
+            padding: const pw.EdgeInsets.only(bottom: 16),
+            decoration: const pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(color: PdfColors.green, width: 2),
+              ),
             ),
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -156,708 +76,551 @@ const Text(
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('MediHub',
-                        style: pw.TextStyle(
-                            fontSize: 26,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.white)),
-                    pw.SizedBox(height: 4),
-                    pw.Text('Medical Prescription',
-                        style: const pw.TextStyle(
-                            fontSize: 12, color: PdfColors.white)),
+                    pw.Text(
+                      'MediHub',
+                      style: pw.TextStyle(
+                        fontSize: 24,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.green800,
+                      ),
+                    ),
+                    pw.Text(
+                      'Medical Prescription',
+                      style: const pw.TextStyle(
+                        fontSize: 12,
+                        color: PdfColors.grey600,
+                      ),
+                    ),
                   ],
                 ),
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    pw.Text('Date: $dateStr',
-                        style: const pw.TextStyle(
-                            fontSize: 11, color: PdfColors.white)),
-                    pw.SizedBox(height: 4),
-                    pw.Text('Serial #${widget.appointment['serialNumber']}',
-                        style: pw.TextStyle(
-                            fontSize: 11,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.white)),
+                    pw.Text(
+                      'Date: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                    pw.Text(
+                      'Serial: #${a.serialNumber}',
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
+          pw.SizedBox(height: 20),
 
-          pw.SizedBox(height: 18),
-
-          // ── Doctor / Patient info ────────────────────────────────────
+          // Doctor & Patient info
           pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Expanded(
-                child: _pdfInfoBox('Doctor', [
-                  widget.prescription['doctorName'] ?? widget.appointment['doctorName'] ?? 'N/A',
-                  widget.appointment['specialization'] ?? '',
-                ]),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Doctor',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.green800,
+                      ),
+                    ),
+                    pw.Text(p.doctorName ?? a.doctorName ?? 'N/A'),
+                    pw.Text(p.doctorSpecialization ?? a.specialization ?? ''),
+                  ],
+                ),
               ),
-              pw.SizedBox(width: 12),
               pw.Expanded(
-                child: _pdfInfoBox('Patient', [
-                  widget.prescription['patientName'] ?? widget.appointment['patientName'] ?? 'N/A',
-                  widget.appointment['patientMobile'] ?? '',
-                ]),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Patient',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.green800,
+                      ),
+                    ),
+                    pw.Text(p.patientName ?? a.patientName ?? 'N/A'),
+                    pw.Text(p.patientMobile ?? a.patientMobile ?? ''),
+                  ],
+                ),
               ),
             ],
           ),
+          pw.SizedBox(height: 20),
 
-          pw.SizedBox(height: 18),
-
-          // ── Medicines ───────────────────────────────────────────────
-          if (medicines.isNotEmpty) ...[
-            _pdfSectionHeader('Medicines'),
-            pw.SizedBox(height: 8),
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
-              columnWidths: {
-                0: const pw.FlexColumnWidth(0.5),
-                1: const pw.FlexColumnWidth(3),
-                2: const pw.FlexColumnWidth(1.5),
-                3: const pw.FlexColumnWidth(2.5),
-              },
-              children: [
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.green50),
-                  children: ['#', 'Medicine', 'Dose', 'Timing']
-                      .map((h) => pw.Padding(
-                            padding: const pw.EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 6),
-                            child: pw.Text(h,
-                                style: pw.TextStyle(
-                                    fontWeight: pw.FontWeight.bold,
-                                    fontSize: 11,
-                                    color: PdfColors.green900)),
-                          ))
-                      .toList(),
-                ),
-                ...medicines.asMap().entries.map((e) => pw.TableRow(
-                      children: [
-                        '${e.key + 1}',
-                        e.value['name'] ?? '',
-                        e.value['dose'] ?? '',
-                        e.value['timing'] ?? '',
-                      ]
-                          .map((cell) => pw.Padding(
-                                padding: const pw.EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 6),
-                                child: pw.Text(cell,
-                                    style: const pw.TextStyle(fontSize: 11)),
-                              ))
-                          .toList(),
-                    )),
-              ],
-            ),
-            pw.SizedBox(height: 16),
-          ],
-
-          // ── Tests ───────────────────────────────────────────────────
-          if (tests.isNotEmpty) ...[
-            _pdfSectionHeader('Investigations / Tests'),
-            pw.SizedBox(height: 8),
-            ...tests.asMap().entries.map((e) => pw.Padding(
-                  padding: const pw.EdgeInsets.only(bottom: 4),
-                  child: pw.Row(children: [
-                    pw.Text('${e.key + 1}.  ',
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                    pw.Text(e.value,
-                        style: const pw.TextStyle(fontSize: 11)),
-                  ]),
-                )),
-            pw.SizedBox(height: 16),
-          ],
-
-          // ── Notes ───────────────────────────────────────────────────
-          if (notes.isNotEmpty) ...[
-            _pdfSectionHeader('Doctor\'s Notes'),
-            pw.SizedBox(height: 8),
-            pw.Container(
-              padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
-                color: PdfColors.grey100,
-                borderRadius: pw.BorderRadius.circular(6),
-                border: pw.Border.all(color: PdfColors.grey300),
+          // Medicines
+          if (p.medicines.isNotEmpty) ...[
+            pw.Text(
+              'Medicines',
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.green800,
               ),
-              child: pw.Text(notes,
-                  style: const pw.TextStyle(fontSize: 11)),
             ),
-            pw.SizedBox(height: 16),
-          ],
-
-          // ── Follow-up ───────────────────────────────────────────────
-          if (hasFollowUp) ...[
-            pw.Container(
-              padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
+            pw.SizedBox(height: 8),
+            pw.Table.fromTextArray(
+              headers: ['#', 'Medicine', 'Dose', 'Timing'],
+              data: p.medicines.asMap().entries.map((e) {
+                final m = e.value;
+                return ['${e.key + 1}', m.name, m.dose, m.timing];
+              }).toList(),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 10,
+              ),
+              cellStyle: const pw.TextStyle(fontSize: 10),
+              cellAlignment: pw.Alignment.centerLeft,
+              headerDecoration: const pw.BoxDecoration(
                 color: PdfColors.green50,
-                borderRadius: pw.BorderRadius.circular(6),
-                border: pw.Border.all(color: PdfColors.green700, width: 1),
               ),
-              child: pw.Row(
+              border: pw.TableBorder.all(color: PdfColors.grey300),
+              cellPadding: const pw.EdgeInsets.all(6),
+            ),
+            pw.SizedBox(height: 16),
+          ],
+
+          // Tests
+          if (p.tests.isNotEmpty) ...[
+            pw.Text(
+              'Diagnostic Tests',
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.green800,
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            ...p.tests.map(
+              (t) => pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 4),
+                child: pw.Row(
+                  children: [
+                    pw.Text(
+                      '• ',
+                      style: const pw.TextStyle(color: PdfColors.green800),
+                    ),
+                    pw.Text(t),
+                  ],
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 16),
+          ],
+
+          // Notes
+          if (p.notes != null && p.notes!.isNotEmpty) ...[
+            pw.Text(
+              'Notes',
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.green800,
+              ),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(p.notes!),
+            pw.SizedBox(height: 16),
+          ],
+
+          // Follow-up
+          if (p.hasFollowUp) ...[
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.orange),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('Follow-up recommended: ',
-                      style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 11,
-                          color: PdfColors.green900)),
                   pw.Text(
-                      'In ${widget.prescription['followUpDate'] ?? ""}  •  '
-                      'Fee ৳${widget.prescription['followUpFee'] ?? ""}',
-                      style: pw.TextStyle(
-                          fontSize: 11, color: PdfColors.green900)),
+                    'Follow-up',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.orange800,
+                    ),
+                  ),
+                  if (p.followUpDate != null)
+                    pw.Text('Date: ${p.followUpDate}'),
+                  if (p.followUpFee != null) pw.Text('Fee: ৳${p.followUpFee}'),
                 ],
               ),
             ),
-            pw.SizedBox(height: 16),
           ],
-
-          // ── Footer ──────────────────────────────────────────────────
-          pw.Divider(color: PdfColors.grey400),
-          pw.SizedBox(height: 6),
-          pw.Text(
-            'This prescription was issued via MediHub. Always consult your doctor before making any medication changes.',
-            style: pw.TextStyle(
-                fontSize: 9,
-                fontStyle: pw.FontStyle.italic,
-                color: PdfColors.grey600),
-          ),
         ],
       ),
     );
-    return pdf;
-  }
 
-  pw.Widget _pdfInfoBox(String title, List<String> lines) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(10),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey300),
-        borderRadius: pw.BorderRadius.circular(6),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(title,
-              style: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  fontSize: 10,
-                  color: PdfColors.green800)),
-          pw.SizedBox(height: 4),
-          ...lines.where((l) => l.isNotEmpty).map(
-                (l) => pw.Text(l,
-                    style: const pw.TextStyle(fontSize: 11)),
-              ),
-        ],
-      ),
+    await Printing.layoutPdf(
+      onLayout: (format) => doc.save(),
+      name: 'Prescription_${a.patientName ?? "patient"}_${a.selectedDay}',
     );
   }
 
-  pw.Widget _pdfSectionHeader(String text) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: pw.BoxDecoration(
-        color: PdfColors.green700,
-        borderRadius: pw.BorderRadius.circular(4),
-      ),
-      child: pw.Text(text,
-          style: pw.TextStyle(
-              color: PdfColors.white,
-              fontWeight: pw.FontWeight.bold,
-              fontSize: 12)),
-    );
-  }
-
-  Future<void> _downloadPdf(BuildContext context) async {
-    try {
-      final pdf = await _buildPdf();
-      final bytes = await pdf.save();
-
-      Directory? dir;
-      try {
-        if (Platform.isAndroid) dir = await getDownloadsDirectory();
-      } catch (_) {}
-      dir ??= await getApplicationDocumentsDirectory();
-
-      final filename =
-          'MediHub_Prescription_${widget.appointment['serialNumber']}_${(widget.prescription['doctorName'] ?? 'Doctor').toString().replaceAll(' ', '_')}.pdf';
-      final file = File('${dir.path}/$filename');
-      await file.writeAsBytes(bytes);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Saved: $filename'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Share',
-              textColor: Colors.white,
-              onPressed: () =>
-                  Printing.sharePdf(bytes: bytes, filename: filename),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _sharePdf(BuildContext context) async {
-    final pdf = await _buildPdf();
-    final bytes = await pdf.save();
-    await Printing.sharePdf(
-      bytes: bytes,
-      filename:
-          'MediHub_Prescription_${widget.appointment['serialNumber']}.pdf',
-    );
-  }
-
-  // ── UI ──────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final medicines = (widget.prescription['medicines'] as List? ?? [])
-        .map((e) => Map<String, String>.from(e))
-        .toList();
-    final tests = List<String>.from(widget.prescription['tests'] ?? []);
-    final notes = (widget.prescription['notes'] ?? '').toString();
-    final hasFollowUp = widget.prescription['hasFollowUp'] == true;
-    final dateStr = DateFormat('dd MMM yyyy')
-        .format(DateTime.parse(widget.appointment['timestamp']));
-    final doctorName =
-        widget.prescription['doctorName'] ?? widget.appointment['doctorName'] ?? 'Doctor';
-    final specialization = widget.appointment['specialization'] ?? '';
+    final p = _prescription;
+    final a = widget.appointment;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text('Prescription'),
-        backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.green.shade700,
         elevation: 0,
-        centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
-            tooltip: 'Share',
-            onPressed: () => _sharePdf(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.download),
+            icon: Icon(Icons.print, color: Colors.green.shade700),
             tooltip: 'Download PDF',
-            onPressed: () => _downloadPdf(context),
+            onPressed: _downloadPdf,
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Header card ──────────────────────────────────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.green.shade500, Colors.green.shade700],
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.local_hospital,
-                          color: Colors.white, size: 28),
-                      const SizedBox(width: 10),
-                      const Text('MediHub',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold)),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text('#${widget.appointment['serialNumber']}',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Medical Prescription',
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
-                          fontSize: 13)),
-                  const SizedBox(height: 4),
-                  Text(dateStr,
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 12)),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // ── Doctor & Patient info ────────────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: _infoCard(
-                    icon: Icons.medical_services,
-                    title: 'Doctor',
-                    lines: [doctorName, specialization],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _infoCard(
-                    icon: Icons.person,
-                    title: 'Patient',
-                    lines: [
-                      widget.prescription['patientName'] ??
-                          widget.appointment['patientName'] ??
-                          'N/A',
-                      widget.appointment['patientMobile'] ?? '',
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // ── Medicines ────────────────────────────────────────────
-            if (medicines.isNotEmpty) ...[
-              _sectionHeader('Medicines', Icons.medication),
-              const SizedBox(height: 10),
-              ...medicines.asMap().entries.map((entry) {
-                final i = entry.key;
-                final m = entry.value;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.green.shade100),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 6)
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 30,
-                        height: 30,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade600,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text('${i + 1}',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13)),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(m['name'] ?? '',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14)),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${m['dose'] ?? ''}  •  ${m['timing'] ?? ''}',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-              const SizedBox(height: 8),
-            ],
-
-            // ── Tests ────────────────────────────────────────────────
-            if (tests.isNotEmpty) ...[
-              _sectionHeader('Investigations / Tests', Icons.biotech),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: tests
-                    .map((t) => Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(20),
-                            border:
-                                Border.all(color: Colors.green.shade300),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.check_circle_outline,
-                                  size: 14,
-                                  color: Colors.green.shade700),
-                              const SizedBox(width: 5),
-                              Flexible(
-                                child: Text(t,
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.green.shade800,
-                                        fontWeight: FontWeight.w600),
-                                    overflow: TextOverflow.ellipsis),
-                              ),
-                            ],
-                          ),
-                        ))
-                    .toList(),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // ── Doctor's Notes ───────────────────────────────────────
-            if (notes.isNotEmpty) ...[
-              _sectionHeader('Doctor\'s Notes', Icons.note_alt),
-              const SizedBox(height: 10),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header card
               Container(
-                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.green.shade600, Colors.green.shade800],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.medical_services,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            p.doctorName ?? a.doctorName ?? 'Doctor',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            p.doctorSpecialization ?? a.specialization ?? '',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          a.selectedDay,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        Text(
+                          'Serial #${a.serialNumber}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Patient info
+              Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade100),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
-                child: Text(notes,
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade800,
-                        height: 1.5)),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // ── Follow-up ────────────────────────────────────────────
-            if (hasFollowUp) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: _followUpBooked
-                      ? Colors.grey.shade50
-                      : Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: _followUpBooked
-                          ? Colors.grey.shade300
-                          : Colors.green.shade300),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Row(
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.blue.shade100,
+                      child: Icon(Icons.person, color: Colors.blue.shade700),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            p.patientName ?? a.patientName ?? 'Patient',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          if (p.patientMobile != null ||
+                              a.patientMobile != null)
+                            Text(
+                              p.patientMobile ?? a.patientMobile ?? '',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Medicines
+              if (p.medicines.isNotEmpty) ...[
+                _sectionTitle('Medicines'),
+                ...p.medicines.map(
+                  (m) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(
                       children: [
-                        Icon(Icons.event_repeat,
-                            color: _followUpBooked
-                                ? Colors.grey
-                                : Colors.green.shade700,
-                            size: 22),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.medication,
+                            size: 20,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _followUpBooked
-                                    ? 'Follow-up Already Booked'
-                                    : 'Follow-up Recommended',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: _followUpBooked
-                                        ? Colors.grey.shade700
-                                        : Colors.green.shade800,
-                                    fontSize: 13),
+                                m.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              const SizedBox(height: 3),
-                              Text(
-                                'In ${widget.prescription['followUpDate'] ?? ""}  •  Fee ৳${widget.prescription['followUpFee'] ?? ""}',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: _followUpBooked
-                                        ? Colors.grey.shade500
-                                        : Colors.green.shade700),
-                              ),
+                              if (m.dose.isNotEmpty || m.timing.isNotEmpty)
+                                Text(
+                                  '${m.dose}  ${m.timing}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
                       ],
                     ),
-                    if (!_followUpBooked) ...[
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showFollowUpSheet(context),
-                          icon: const Icon(Icons.event_available, size: 18),
-                          label: const Text('Book Follow-up Appointment'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
-                            foregroundColor: Colors.white,
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
-                            textStyle: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 16),
+              ],
 
-            // ── Download / Share buttons ─────────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _sharePdf(context),
-                    icon: const Icon(Icons.share, size: 18),
-                    label: const Text('Share'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.green.shade700,
-                      side: BorderSide(color: Colors.green.shade400),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+              // Tests
+              if (p.tests.isNotEmpty) ...[
+                _sectionTitle('Diagnostic Tests'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: p.tests
+                      .map(
+                        (t) => Chip(
+                          label: Text(t),
+                          backgroundColor: Colors.blue.shade50,
+                          side: BorderSide(color: Colors.blue.shade200),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Notes
+              if (p.notes != null && p.notes!.isNotEmpty) ...[
+                _sectionTitle('Notes'),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Text(
+                    p.notes!,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade700,
+                      height: 1.5,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _downloadPdf(context),
-                    icon: const Icon(Icons.download, size: 18),
-                    label: const Text('Download PDF'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
+                const SizedBox(height: 16),
+              ],
+
+              // Follow-up
+              if (p.hasFollowUp) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.event_repeat,
+                            color: Colors.orange.shade700,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Follow-up Required',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (p.followUpDate != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Date: ${p.followUpDate}',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                      if (p.followUpFee != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Fee: ৳${p.followUpFee}',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      if (!p.followUpBooked)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _bookFollowUp,
+                            icon: const Icon(Icons.calendar_today, size: 18),
+                            label: const Text('Book Follow-up'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: Colors.green.shade700,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Follow-up Booked',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
-            ),
 
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionHeader(String title, IconData icon) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: Colors.green.shade600,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: Colors.white, size: 16),
-        ),
-        const SizedBox(width: 8),
-        Text(title,
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800)),
-      ],
-    );
-  }
-
-  Widget _infoCard(
-      {required IconData icon,
-      required String title,
-      required List<String> lines}) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.shade100),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.03), blurRadius: 6)
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: Colors.green.shade600, size: 14),
-              const SizedBox(width: 5),
-              Text(title,
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.green.shade700,
-                      fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ...lines.where((l) => l.isNotEmpty).map(
-                (l) => Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Text(l,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 24),
+              // Download button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _downloadPdf,
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: const Text(
+                    'Download as PDF',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.green.shade700,
+                    side: BorderSide(color: Colors.green.shade600, width: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
                 ),
               ),
-        ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey.shade800,
+        ),
       ),
     );
   }

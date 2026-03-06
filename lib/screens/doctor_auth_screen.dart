@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../blocs/auth/auth_cubit.dart';
 import '../services/bmdc_license_verification_service.dart';
 import '../services/supabase_auth_service.dart';
 
@@ -112,12 +114,13 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
         return;
       }
 
-      final doctorData = _profileToMap(profile);
-
-      _showSnackBar('Welcome ${doctorData['name']}!', Colors.green);
+      _showSnackBar('Welcome ${profile['full_name']}!', Colors.green);
+      if (mounted) {
+        await context.read<AuthCubit>().checkSession();
+      }
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          context.go('/doctor', extra: doctorData);
+          context.go('/doctor');
         }
       });
     } on AuthException catch (e) {
@@ -257,28 +260,6 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
   }
 
   // ─── Helpers ───────────────────────────────────────────────
-
-  /// Convert a Supabase row into the Map<String, String> the app expects.
-  Map<String, String> _profileToMap(Map<String, dynamic> profile) {
-    return {
-      'name': profile['full_name']?.toString() ?? '',
-      'email': profile['email']?.toString() ?? '',
-      'phone': profile['phone']?.toString() ?? '',
-      'nid': profile['nid']?.toString() ?? '',
-      'license': profile['license']?.toString() ?? '',
-      'specialization': profile['specialization']?.toString() ?? '',
-      'hospital': profile['hospital']?.toString() ?? '',
-      'department': profile['department']?.toString() ?? '',
-      'degree': profile['degree']?.toString() ?? '',
-      'medicalCollege': profile['medical_college']?.toString() ?? '',
-      'location': profile['location']?.toString() ?? 'Dhaka',
-      'description': profile['description']?.toString() ?? '',
-      'consultationFee': profile['consultation_fee']?.toString() ?? '500',
-      'diagnostic': profile['diagnostic']?.toString() ?? 'MediHub Centre',
-      'experience': profile['experience']?.toString() ?? '',
-      'profileImage': profile['profile_image']?.toString() ?? '',
-    };
-  }
 
   void _clearControllers() {
     _loginEmailController.clear();
