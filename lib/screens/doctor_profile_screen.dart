@@ -8,7 +8,7 @@ import '../repositories/doctor_repository.dart';
 class DoctorProfileScreen extends StatefulWidget {
   final DoctorProfile doctor;
 
-  const DoctorProfileScreen({Key? key, required this.doctor}) : super(key: key);
+  const DoctorProfileScreen({super.key, required this.doctor});
 
   @override
   State<DoctorProfileScreen> createState() => _DoctorProfileScreenState();

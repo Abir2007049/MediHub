@@ -8,7 +8,7 @@ import '../blocs/doctor_profile/doctor_profile_state.dart';
 import '../models/doctor_profile.dart';
 
 class DoctorEditProfileScreen extends StatefulWidget {
-  const DoctorEditProfileScreen({Key? key}) : super(key: key);
+  const DoctorEditProfileScreen({super.key});
 
   @override
   State<DoctorEditProfileScreen> createState() =>

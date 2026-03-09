@@ -7,7 +7,7 @@ import '../services/bmdc_license_verification_service.dart';
 import '../services/supabase_auth_service.dart';
 
 class DoctorAuthScreen extends StatefulWidget {
-  const DoctorAuthScreen({Key? key}) : super(key: key);
+  const DoctorAuthScreen({super.key});
 
   @override
   State<DoctorAuthScreen> createState() => _DoctorAuthScreenState();

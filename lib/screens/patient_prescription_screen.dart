@@ -12,10 +12,10 @@ class PatientPrescriptionScreen extends StatefulWidget {
   final Appointment appointment;
 
   const PatientPrescriptionScreen({
-    Key? key,
+    super.key,
     required this.prescription,
     required this.appointment,
-  }) : super(key: key);
+  });
 
   @override
   State<PatientPrescriptionScreen> createState() =>

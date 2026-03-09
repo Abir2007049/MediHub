@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:medihub/models/prescription.dart';
 import '../../models/medicine.dart';
 import '../../repositories/prescription_repository.dart';
 import 'prescription_state.dart';
@@ -42,7 +43,7 @@ class PrescriptionCubit extends Cubit<PrescriptionState> {
   }) async {
     emit(PrescriptionSaving());
     try {
-      late final prescription;
+      late final Prescription prescription;
       if (existingId != null) {
         prescription = await _repo.updatePrescription(
           existingId,

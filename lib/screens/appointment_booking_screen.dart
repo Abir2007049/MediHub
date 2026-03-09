@@ -9,8 +9,7 @@ import '../models/doctor_schedule.dart';
 class AppointmentBookingScreen extends StatefulWidget {
   final DoctorProfile doctor;
 
-  const AppointmentBookingScreen({Key? key, required this.doctor})
-    : super(key: key);
+  const AppointmentBookingScreen({super.key, required this.doctor});
 
   @override
   State<AppointmentBookingScreen> createState() =>

@@ -8,7 +8,7 @@ import '../blocs/appointments/appointments_state.dart';
 import '../models/appointment.dart';
 
 class PatientHistoryScreen extends StatefulWidget {
-  const PatientHistoryScreen({Key? key}) : super(key: key);
+  const PatientHistoryScreen({super.key});
 
   @override
   State<PatientHistoryScreen> createState() => _PatientHistoryScreenState();

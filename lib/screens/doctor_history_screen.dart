@@ -10,7 +10,7 @@ import '../blocs/appointments/appointments_state.dart';
 import '../models/appointment.dart';
 
 class DoctorHistoryScreen extends StatefulWidget {
-  const DoctorHistoryScreen({Key? key}) : super(key: key);
+  const DoctorHistoryScreen({super.key});
 
   @override
   State<DoctorHistoryScreen> createState() => _DoctorHistoryScreenState();

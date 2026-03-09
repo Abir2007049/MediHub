@@ -14,12 +14,12 @@ class PaymentScreen extends StatefulWidget {
   final String? approximateTime;
 
   const PaymentScreen({
-    Key? key,
+    super.key,
     required this.doctor,
     required this.selectedDay,
     required this.selectedSerialNumber,
     this.approximateTime,
-  }) : super(key: key);
+  });
 
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();

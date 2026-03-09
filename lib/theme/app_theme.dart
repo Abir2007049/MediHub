@@ -36,7 +36,7 @@ ThemeData getAppTheme() {
     colorScheme: ColorScheme.fromSwatch().copyWith(
       primary: c.primaryGreen,
       secondary: c.accentGreen,
-      background: c.background,
+      surface: c.background,
     ),
     appBarTheme: AppBarTheme(
       backgroundColor: c.primaryGreen,

@@ -11,8 +11,7 @@ import '../services/medicine_test_service.dart';
 class PrescriptionScreen extends StatefulWidget {
   final Appointment appointment;
 
-  const PrescriptionScreen({Key? key, required this.appointment})
-    : super(key: key);
+  const PrescriptionScreen({super.key, required this.appointment});
 
   @override
   State<PrescriptionScreen> createState() => _PrescriptionScreenState();
@@ -549,7 +548,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                       Switch(
                         value: _hasFollowUp,
                         onChanged: (v) => setState(() => _hasFollowUp = v),
-                        activeColor: Colors.green.shade600,
+                        activeThumbColor: Colors.green.shade600,
                       ),
                     ],
                   ),
