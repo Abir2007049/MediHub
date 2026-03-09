@@ -107,6 +107,22 @@ class DoctorRepository {
     return sum / data.length;
   }
 
+  /// Returns a map of doctorId → average rating for all doctors that have reviews.
+  /// Fetches all reviews in a single query and aggregates client-side.
+  Future<Map<String, double>> getAllDoctorRatings() async {
+    final data = await _client.from('reviews').select('doctor_id, rating');
+    final Map<String, List<double>> grouped = {};
+    for (final row in data) {
+      final id = row['doctor_id'] as String;
+      final rating = (row['rating'] as num).toDouble();
+      grouped.putIfAbsent(id, () => []).add(rating);
+    }
+    return grouped.map(
+      (id, ratings) =>
+          MapEntry(id, ratings.reduce((a, b) => a + b) / ratings.length),
+    );
+  }
+
   Future<int> getDoctorReviewCount(String doctorId) async {
     final data = await _client
         .from('reviews')

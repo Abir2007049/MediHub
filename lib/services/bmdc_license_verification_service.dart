@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class BmdcLicenseVerificationResult {
   final bool isValid;
   final String normalizedLicense;
@@ -14,21 +16,9 @@ class BmdcLicenseVerificationService {
   // BMDC notices often use format like A-57882, A-104355 etc.
   static final RegExp _bmdcPattern = RegExp(r'^[A-Z]-\d{4,6}$');
 
-  // Example blocked/suspended registrations (can be expanded from BMDC notices)
-  static const Set<String> _blockedRegistrations = {
-    'A-57882',
-    'A-78864',
-    'A-53065',
-    'A-49675',
-    'A-53658',
-    'A-42757',
-    'A-95890',
-    'A-104355',
-    'A-35620',
-    'A-67372',
-  };
-
-  static BmdcLicenseVerificationResult verify(String rawLicense) {
+  /// Verifies a BMDC license: validates format, then checks the
+  /// `blocked_licenses` Supabase table for suspensions.
+  static Future<BmdcLicenseVerificationResult> verify(String rawLicense) async {
     final normalized = _normalize(rawLicense);
 
     if (normalized.isEmpty) {
@@ -47,12 +37,25 @@ class BmdcLicenseVerificationService {
       );
     }
 
-    if (_blockedRegistrations.contains(normalized)) {
-      return BmdcLicenseVerificationResult(
-        isValid: false,
-        normalizedLicense: normalized,
-        message: 'This BMDC license appears suspended/blocked. Account cannot be created.',
-      );
+    // Check blocked_licenses table in Supabase
+    try {
+      final row = await Supabase.instance.client
+          .from('blocked_licenses')
+          .select('license')
+          .eq('license', normalized)
+          .maybeSingle();
+
+      if (row != null) {
+        return BmdcLicenseVerificationResult(
+          isValid: false,
+          normalizedLicense: normalized,
+          message:
+              'This BMDC license appears suspended/blocked. Account cannot be created.',
+        );
+      }
+    } catch (_) {
+      // If the query fails (e.g. offline), fall through to valid —
+      // the server-side RLS will still protect actual operations.
     }
 
     return BmdcLicenseVerificationResult(

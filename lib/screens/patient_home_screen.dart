@@ -340,7 +340,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildStatCard(
-                          '4.8',
+                          state.doctorRatings.isNotEmpty
+                              ? (state.doctorRatings.values.reduce(
+                                          (a, b) => a + b,
+                                        ) /
+                                        state.doctorRatings.length)
+                                    .toStringAsFixed(1)
+                              : '--',
                           'Rating',
                           Icons.star_outline,
                           Colors.amber,
@@ -563,7 +569,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       ),
                     );
                   },
-                  child: _buildDoctorCard(doctor, index),
+                  child: _buildDoctorCard(doctor, index, state.doctorRatings),
                 );
               },
             ),
@@ -664,7 +670,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 
-  Widget _buildDoctorCard(DoctorProfile doctor, int index) {
+  Widget _buildDoctorCard(
+    DoctorProfile doctor,
+    int index,
+    Map<String, double> doctorRatings,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -902,7 +912,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '4.8',
+                                  doctorRatings.containsKey(doctor.id)
+                                      ? doctorRatings[doctor.id]!
+                                            .toStringAsFixed(1)
+                                      : 'New',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,

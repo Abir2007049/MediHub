@@ -134,7 +134,7 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
 
   // ─── Registration Step 1 ───────────────────────────────────
 
-  void _handleRegistrationStep1() {
+  Future<void> _handleRegistrationStep1() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
@@ -160,18 +160,25 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
       return;
     }
 
-    final bmdcResult = BmdcLicenseVerificationService.verify(license);
-    if (!bmdcResult.isValid) {
-      _showSnackBar(bmdcResult.message, Colors.red);
-      return;
+    setState(() => _loading = true);
+    try {
+      final bmdcResult = await BmdcLicenseVerificationService.verify(license);
+      if (!bmdcResult.isValid) {
+        _showSnackBar(bmdcResult.message, Colors.red);
+        return;
+      }
+
+      _licenseController.text = bmdcResult.normalizedLicense;
+
+      setState(() {
+        _registrationStep = 2;
+      });
+      _showSnackBar('BMDC license verified. Proceed to step 2', Colors.green);
+    } catch (e) {
+      _showSnackBar('License verification failed: $e', Colors.red);
+    } finally {
+      setState(() => _loading = false);
     }
-
-    _licenseController.text = bmdcResult.normalizedLicense;
-
-    setState(() {
-      _registrationStep = 2;
-    });
-    _showSnackBar('BMDC license verified. Proceed to step 2', Colors.green);
   }
 
   // ─── Registration Step 2 ───────────────────────────────────

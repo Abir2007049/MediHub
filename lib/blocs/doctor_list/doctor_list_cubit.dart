@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../models/doctor_profile.dart';
 import '../../repositories/doctor_repository.dart';
 import 'doctor_list_state.dart';
 
@@ -12,14 +13,18 @@ class DoctorListCubit extends Cubit<DoctorListState> {
   Future<void> loadDoctors() async {
     emit(DoctorListLoading());
     try {
-      final doctors = await _repo.getAllDoctors();
-      final specializations = await _repo.getAllSpecializations();
-      final locations = await _repo.getAllLocations();
+      final results = await Future.wait([
+        _repo.getAllDoctors(),
+        _repo.getAllSpecializations(),
+        _repo.getAllLocations(),
+        _repo.getAllDoctorRatings(),
+      ]);
       emit(
         DoctorListLoaded(
-          doctors: doctors,
-          specializations: specializations,
-          locations: locations,
+          doctors: results[0] as List<DoctorProfile>,
+          specializations: results[1] as List<String>,
+          locations: results[2] as List<String>,
+          doctorRatings: results[3] as Map<String, double>,
         ),
       );
     } catch (e) {
