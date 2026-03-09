@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:medihub/models/prescription.dart';
+import '../../models/prescription.dart';
 import '../../models/medicine.dart';
 import '../../repositories/prescription_repository.dart';
 import 'prescription_state.dart';
