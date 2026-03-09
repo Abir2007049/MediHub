@@ -467,7 +467,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: DropdownButtonFormField<String>(
-                value: _selectedLocation,
+                initialValue: _selectedLocation,
                 decoration: InputDecoration(
                   hintText: 'Select Location',
                   prefixIcon: Icon(
