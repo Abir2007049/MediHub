@@ -10,7 +10,7 @@ create table if not exists public.blocked_licenses (
 
 alter table public.blocked_licenses enable row level security;
 
--- Anyone authenticated can check if a license is blocked
+-- Anyone can check if a license is blocked (used during pre-auth signup flow)
 create policy "Anyone can read blocked licenses"
     on public.blocked_licenses for select
     using (true);

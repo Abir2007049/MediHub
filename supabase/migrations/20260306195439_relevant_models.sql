@@ -1,3 +1,6 @@
+-- Ensure UUID helper is available before using gen_random_uuid().
+create extension if not exists pgcrypto;
+
 -- ============================================================
 -- 3. Appointments table
 -- ============================================================
@@ -21,8 +24,16 @@ create table if not exists public.appointments (
     parent_appointment_id uuid references public.appointments(id),
     created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
-alter table public.appointments
-add constraint unique_booking unique (doctor_id, selected_day, serial_number);
+do $$
+begin
+    if not exists (
+        select 1 from pg_constraint where conname = 'unique_booking'
+    ) then
+        alter table public.appointments
+            add constraint unique_booking unique (doctor_id, selected_day, serial_number);
+    end if;
+end
+$$;
 -- 4. Prescriptions table
 create table if not exists public.prescriptions (
     id uuid default gen_random_uuid() not null primary key,
@@ -43,6 +54,16 @@ create table if not exists public.prescriptions (
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+do $$
+begin
+    if not exists (
+        select 1 from pg_constraint where conname = 'unique_prescription_per_appointment'
+    ) then
+        alter table public.prescriptions
+            add constraint unique_prescription_per_appointment unique (appointment_id);
+    end if;
+end
+$$;
 -- 5. Reviews table
 create table if not exists public.reviews (
     id uuid default gen_random_uuid() not null primary key,
@@ -66,6 +87,16 @@ create table if not exists public.doctor_schedules (
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+do $$
+begin
+    if not exists (
+        select 1 from pg_constraint where conname = 'unique_doctor_schedule_day'
+    ) then
+        alter table public.doctor_schedules
+            add constraint unique_doctor_schedule_day unique (doctor_id, day_of_week);
+    end if;
+end
+$$;
 -- ============================================================
 -- RLS for new tables
 -- ============================================================
