@@ -33,6 +33,11 @@ class AppTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolvedPrefixIcon = prefixIcon ?? (obscureText ? Icons.lock : null);
+    final colorScheme = Theme.of(context).colorScheme;
+    const noBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+      borderSide: BorderSide.none,
+    );
 
     return TextField(
       controller: controller,
@@ -46,6 +51,14 @@ class AppTextField extends StatelessWidget {
         labelText: labelText,
         hintText: hintText,
         helperText: helperText,
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest,
+        border: noBorder,
+        enabledBorder: noBorder,
+        focusedBorder: noBorder,
+        disabledBorder: noBorder,
+        errorBorder: noBorder,
+        focusedErrorBorder: noBorder,
         prefixIcon: resolvedPrefixIcon != null
             ? Icon(resolvedPrefixIcon)
             : null,
