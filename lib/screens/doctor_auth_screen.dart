@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:medihub/services/bmdc_license_verification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../shared/widgets/app_error_banner.dart';
+import '../shared/widgets/app_step_indicator.dart';
 import '../blocs/auth/auth_cubit.dart';
 import '../services/supabase_auth_service.dart';
+import 'widgets/doctor_auth/doctor_login_form.dart';
+import 'widgets/doctor_auth/doctor_registration_step1_form.dart';
+import 'widgets/doctor_auth/doctor_registration_step2_form.dart';
+import 'widgets/doctor_auth/doctor_registration_step3_form.dart';
 
 class DoctorAuthScreen extends StatefulWidget {
   const DoctorAuthScreen({super.key});
@@ -22,32 +27,42 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
   int _registrationStep = 1; // 1-3 for registration
   bool _loading = false;
 
-  late TextEditingController _loginEmailController;
-  late TextEditingController _loginPasswordController;
+  late final TextEditingController _loginEmailController;
+  late final TextEditingController _loginPasswordController;
   bool _obscureLoginPassword = true;
 
-  late TextEditingController _nameController;
-  late TextEditingController _emailController;
-  late TextEditingController _phoneController;
-  late TextEditingController _nidController;
-  late TextEditingController _licenseController;
+  late final TextEditingController _nameController;
+  late final TextEditingController _emailController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _nidController;
+  late final TextEditingController _licenseController;
 
-  late TextEditingController _passwordController;
-  late TextEditingController _confirmPasswordController;
+  late final TextEditingController _passwordController;
+  late final TextEditingController _confirmPasswordController;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  late TextEditingController _specializationController;
-  late TextEditingController _hospitalController;
-  late TextEditingController _departmentController;
-  late TextEditingController _degreeController;
-  late TextEditingController _medicalCollegeController;
+  late final TextEditingController _specializationController;
+  late final TextEditingController _hospitalController;
+  late final TextEditingController _departmentController;
+  late final TextEditingController _degreeController;
+  late final TextEditingController _medicalCollegeController;
 
   String _errorMessage = '';
 
-  late FocusNode _primaryFocusNode;
-  late FocusNode _secondaryFocusNode;
-  late FocusNode _submitButtonFocus;
+  late final FocusNode _primaryFocusNode;
+  late final FocusNode _secondaryFocusNode;
+  late final FocusNode _submitButtonFocus;
+
+  // Additional focus nodes for Step 1
+  late final FocusNode _phoneFocusNode;
+  late final FocusNode _nidFocusNode;
+  late final FocusNode _licenseFocusNode;
+
+  // Additional focus nodes for Step 3
+  late final FocusNode _departmentFocusNode;
+  late final FocusNode _degreeFocusNode;
+  late final FocusNode _collegeFocusNode;
 
   @override
   void initState() {
@@ -56,6 +71,14 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
     _primaryFocusNode = FocusNode();
     _secondaryFocusNode = FocusNode();
     _submitButtonFocus = FocusNode();
+
+    _phoneFocusNode = FocusNode();
+    _nidFocusNode = FocusNode();
+    _licenseFocusNode = FocusNode();
+
+    _departmentFocusNode = FocusNode();
+    _degreeFocusNode = FocusNode();
+    _collegeFocusNode = FocusNode();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _announceScreen();
@@ -85,6 +108,12 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
     _primaryFocusNode.dispose();
     _secondaryFocusNode.dispose();
     _submitButtonFocus.dispose();
+    _phoneFocusNode.dispose();
+    _nidFocusNode.dispose();
+    _licenseFocusNode.dispose();
+    _departmentFocusNode.dispose();
+    _degreeFocusNode.dispose();
+    _collegeFocusNode.dispose();
     super.dispose();
   }
 
@@ -360,24 +389,107 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                 const SizedBox(height: 32),
 
                 if (!_isLogin)
-                  ..._buildProgressIndicator(colorScheme, textTheme),
+                  AppStepIndicator(
+                    currentStep: _registrationStep,
+                    totalSteps: 3,
+                    colorScheme: colorScheme,
+                  ),
 
                 if (!_isLogin) const SizedBox(height: 32),
 
                 // Error
                 if (_errorMessage.isNotEmpty)
-                  ..._buildErrorWidget(_errorMessage, colorScheme),
+                  AppErrorBanner(
+                    message: _errorMessage,
+                    colorScheme: colorScheme,
+                  ),
                 if (_errorMessage.isNotEmpty) const SizedBox(height: 24),
 
                 // Forms
                 if (_isLogin)
-                  ..._buildLoginForm(colorScheme, textTheme)
+                  DoctorLoginForm(
+                    emailController: _loginEmailController,
+                    passwordController: _loginPasswordController,
+                    emailFocusNode: _primaryFocusNode,
+                    passwordFocusNode: _secondaryFocusNode,
+                    submitButtonFocusNode: _submitButtonFocus,
+                    loading: _loading,
+                    obscurePassword: _obscureLoginPassword,
+                    onTogglePassword: () {
+                      setState(
+                        () => _obscureLoginPassword = !_obscureLoginPassword,
+                      );
+                      _announceFeedback(
+                        _obscureLoginPassword
+                            ? 'Password hidden'
+                            : 'Password visible',
+                      );
+                    },
+                    onSubmit: _handleDoctorLogin,
+                  )
                 else if (_registrationStep == 1)
-                  ..._buildRegistrationStep1(colorScheme, textTheme)
+                  DoctorRegistrationStep1Form(
+                    nameController: _nameController,
+                    emailController: _emailController,
+                    phoneController: _phoneController,
+                    nidController: _nidController,
+                    licenseController: _licenseController,
+                    nameFocusNode: _primaryFocusNode,
+                    emailFocusNode: _secondaryFocusNode,
+                    phoneFocusNode: _phoneFocusNode,
+                    nidFocusNode: _nidFocusNode,
+                    licenseFocusNode: _licenseFocusNode,
+                    submitButtonFocusNode: _submitButtonFocus,
+                    loading: _loading,
+                    onContinue: _handleDoctorRegistration,
+                  )
                 else if (_registrationStep == 2)
-                  ..._buildRegistrationStep2(colorScheme, textTheme)
+                  DoctorRegistrationStep2Form(
+                    passwordController: _passwordController,
+                    confirmPasswordController: _confirmPasswordController,
+                    passwordFocusNode: _primaryFocusNode,
+                    confirmPasswordFocusNode: _secondaryFocusNode,
+                    submitButtonFocusNode: _submitButtonFocus,
+                    loading: _loading,
+                    obscurePassword: _obscurePassword,
+                    obscureConfirmPassword: _obscureConfirmPassword,
+                    onTogglePassword: () {
+                      setState(() => _obscurePassword = !_obscurePassword);
+                      _announceFeedback(
+                        _obscurePassword
+                            ? 'Password hidden'
+                            : 'Password visible',
+                      );
+                    },
+                    onToggleConfirmPassword: () {
+                      setState(
+                        () =>
+                            _obscureConfirmPassword = !_obscureConfirmPassword,
+                      );
+                      _announceFeedback(
+                        _obscureConfirmPassword
+                            ? 'Confirm password hidden'
+                            : 'Confirm password visible',
+                      );
+                    },
+                    onContinue: _handleDoctorRegistration,
+                  )
                 else if (_registrationStep == 3)
-                  ..._buildRegistrationStep3(colorScheme, textTheme),
+                  DoctorRegistrationStep3Form(
+                    specializationController: _specializationController,
+                    hospitalController: _hospitalController,
+                    departmentController: _departmentController,
+                    degreeController: _degreeController,
+                    collegeController: _medicalCollegeController,
+                    specializationFocusNode: _primaryFocusNode,
+                    hospitalFocusNode: _secondaryFocusNode,
+                    departmentFocusNode: _departmentFocusNode,
+                    degreeFocusNode: _degreeFocusNode,
+                    collegeFocusNode: _collegeFocusNode,
+                    submitButtonFocusNode: _submitButtonFocus,
+                    loading: _loading,
+                    onSubmit: _handleDoctorRegistration,
+                  ),
 
                 const SizedBox(height: 32),
 
@@ -389,340 +501,6 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
         ),
       ),
     );
-  }
-
-  List<Widget> _buildProgressIndicator(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return [
-      Semantics(
-        label: 'Registration progress: Step $_registrationStep of 3',
-        enabled: true,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(3, (i) {
-            final isActive = i < _registrationStep;
-            return Expanded(
-              child: Row(
-                children: [
-                  Semantics(
-                    label:
-                        'Step ${i + 1}, ${isActive ? "completed" : "pending"}',
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isActive
-                            ? colorScheme.primary
-                            : colorScheme.surfaceContainerHighest,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${i + 1}',
-                          style: TextStyle(
-                            color: isActive
-                                ? colorScheme.onPrimary
-                                : colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (i < 2)
-                    Expanded(
-                      child: Container(
-                        height: 2,
-                        color: i < _registrationStep - 1
-                            ? colorScheme.primary
-                            : colorScheme.outlineVariant,
-                      ),
-                    ),
-                ],
-              ),
-            );
-          }),
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> _buildErrorWidget(String message, ColorScheme colorScheme) {
-    return [
-      Semantics(
-        enabled: true,
-        label: 'Error message: $message',
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colorScheme.error.withAlpha(26),
-            border: Border.all(color: colorScheme.error, width: 2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.error_outline, color: colorScheme.error, size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  message,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.error,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> _buildLoginForm(ColorScheme colorScheme, TextTheme textTheme) {
-    return [
-      _buildAccessibleTextField(
-        focusNode: _primaryFocusNode,
-        controller: _loginEmailController,
-        labelText: 'Email Address',
-        hintText: 'doctor@example.com',
-        prefixIcon: Icons.email,
-        keyboardType: TextInputType.emailAddress,
-        helperText: 'Enter your registered email address',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 20),
-      _buildAccessiblePasswordField(
-        focusNode: _secondaryFocusNode,
-        controller: _loginPasswordController,
-        labelText: 'Password',
-        hintText: '••••••••',
-        obscure: _obscureLoginPassword,
-        onObscureToggle: () {
-          setState(() => _obscureLoginPassword = !_obscureLoginPassword);
-          _announceFeedback(
-            _obscureLoginPassword ? 'Password hidden' : 'Password visible',
-          );
-        },
-        helperText: 'Enter your password',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 32),
-      _buildAccessibleButton(
-        focusNode: _submitButtonFocus,
-        label: 'Sign In',
-        onPressed: _loading ? null : _handleDoctorLogin,
-        isLoading: _loading,
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-    ];
-  }
-
-  List<Widget> _buildRegistrationStep1(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return [
-      _buildAccessibleTextField(
-        focusNode: _primaryFocusNode,
-        controller: _nameController,
-        labelText: 'Full Name',
-        hintText: 'Dr. John Doe',
-        prefixIcon: Icons.person,
-        keyboardType: TextInputType.name,
-        helperText: 'Enter your full name as on BMDC certificate',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 16),
-      _buildAccessibleTextField(
-        focusNode: _secondaryFocusNode,
-        controller: _emailController,
-        labelText: 'Email Address',
-        hintText: 'doctor@example.com',
-        prefixIcon: Icons.email,
-        keyboardType: TextInputType.emailAddress,
-        helperText: 'Use a professional email address',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 16),
-      _buildAccessibleTextField(
-        focusNode: FocusNode(),
-        controller: _phoneController,
-        labelText: 'Phone Number',
-        hintText: '01XXXXXXXXX',
-        prefixIcon: Icons.phone,
-        keyboardType: TextInputType.phone,
-        maxLength: 11,
-        helperText: 'Bangladesh phone number (11 digits starting with 01)',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 16),
-      _buildAccessibleTextField(
-        focusNode: FocusNode(),
-        controller: _nidController,
-        labelText: 'NID Number',
-        hintText: '12345678901234',
-        prefixIcon: Icons.badge,
-        keyboardType: TextInputType.number,
-        maxLength: 17,
-        helperText: 'Enter your 13 or 17-digit National ID number',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 16),
-      _buildAccessibleTextField(
-        focusNode: FocusNode(),
-        controller: _licenseController,
-        labelText: 'BMDC License Number',
-        hintText: 'A-12345',
-        prefixIcon: Icons.card_travel,
-        helperText: 'Enter your BMDC license number',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 32),
-      _buildAccessibleButton(
-        focusNode: _submitButtonFocus,
-        label: 'Continue to Password',
-        onPressed: _loading ? null : _handleDoctorRegistration,
-        isLoading: _loading,
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-    ];
-  }
-
-  List<Widget> _buildRegistrationStep2(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return [
-      _buildAccessiblePasswordField(
-        focusNode: _primaryFocusNode,
-        controller: _passwordController,
-        labelText: 'Password',
-        hintText: '••••••••',
-        obscure: _obscurePassword,
-        onObscureToggle: () {
-          setState(() => _obscurePassword = !_obscurePassword);
-          _announceFeedback(
-            _obscurePassword ? 'Password hidden' : 'Password visible',
-          );
-        },
-        helperText:
-            'At least 8 characters with uppercase, lowercase, and number',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 20),
-      _buildAccessiblePasswordField(
-        focusNode: _secondaryFocusNode,
-        controller: _confirmPasswordController,
-        labelText: 'Confirm Password',
-        hintText: '••••••••',
-        obscure: _obscureConfirmPassword,
-        onObscureToggle: () {
-          setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
-          _announceFeedback(
-            _obscureConfirmPassword
-                ? 'Confirm password hidden'
-                : 'Confirm password visible',
-          );
-        },
-        helperText: 'Passwords must match',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 32),
-      _buildAccessibleButton(
-        focusNode: _submitButtonFocus,
-        label: 'Continue to Credentials',
-        onPressed: _loading ? null : _handleDoctorRegistration,
-        isLoading: _loading,
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-    ];
-  }
-
-  List<Widget> _buildRegistrationStep3(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return [
-      _buildAccessibleTextField(
-        focusNode: _primaryFocusNode,
-        controller: _specializationController,
-        labelText: 'Specialization',
-        hintText: 'Cardiology',
-        prefixIcon: Icons.medical_services,
-        helperText: 'Your primary area of specialization',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 16),
-      _buildAccessibleTextField(
-        focusNode: _secondaryFocusNode,
-        controller: _hospitalController,
-        labelText: 'Hospital/Clinic Name',
-        hintText: 'ABC Medical Center',
-        prefixIcon: Icons.local_hospital,
-        helperText: 'Current or primary hospital/clinic affiliation',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 16),
-      _buildAccessibleTextField(
-        focusNode: FocusNode(),
-        controller: _departmentController,
-        labelText: 'Department',
-        hintText: 'Cardiology Department',
-        prefixIcon: Icons.category,
-        helperText: 'Your department at the hospital/clinic',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 16),
-      _buildAccessibleTextField(
-        focusNode: FocusNode(),
-        controller: _degreeController,
-        labelText: 'Highest Degree',
-        hintText: 'MBBS, MD Cardiology',
-        prefixIcon: Icons.school,
-        helperText: 'Your highest medical degree',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 16),
-      _buildAccessibleTextField(
-        focusNode: FocusNode(),
-        controller: _medicalCollegeController,
-        labelText: 'Medical College',
-        hintText: 'Medical College',
-        prefixIcon: Icons.local_hospital,
-        helperText: 'Medical college where you graduated',
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-      const SizedBox(height: 32),
-      _buildAccessibleButton(
-        focusNode: _submitButtonFocus,
-        label: 'Complete Registration',
-        onPressed: _loading ? null : _handleDoctorRegistration,
-        isLoading: _loading,
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      ),
-    ];
   }
 
   Widget _buildToggleAuthMode(ColorScheme colorScheme, TextTheme textTheme) {
@@ -763,237 +541,6 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAccessibleTextField({
-    required FocusNode focusNode,
-    required TextEditingController controller,
-    required String labelText,
-    required String hintText,
-    required IconData prefixIcon,
-    required ColorScheme colorScheme,
-    required TextTheme textTheme,
-    TextInputType keyboardType = TextInputType.text,
-    int? maxLength,
-    String? helperText,
-  }) {
-    return Focus(
-      focusNode: focusNode,
-      onKeyEvent: (node, event) {
-        if (event.logicalKey == LogicalKeyboardKey.enter) {
-          _handleDoctorRegistration();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(
-                textField: true,
-                enabled: true,
-                label: labelText,
-                onTap: () => focusNode.requestFocus(),
-                child: TextField(
-                  focusNode: focusNode,
-                  controller: controller,
-                  keyboardType: keyboardType,
-                  maxLength: maxLength,
-                  textInputAction: TextInputAction.next,
-                  style: textTheme.bodyLarge,
-                  decoration: InputDecoration(
-                    labelText: labelText,
-                    hintText: hintText,
-                    prefixIcon: Icon(
-                      prefixIcon,
-                      color: isFocused
-                          ? colorScheme.primary
-                          : colorScheme.outline,
-                    ),
-                  ),
-                ),
-              ),
-              if (helperText != null) ...[
-                const SizedBox(height: 8),
-                Semantics(
-                  label: helperText,
-                  enabled: true,
-                  child: Text(helperText, style: textTheme.labelMedium),
-                ),
-              ],
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildAccessiblePasswordField({
-    required FocusNode focusNode,
-    required TextEditingController controller,
-    required String labelText,
-    required String hintText,
-    required bool obscure,
-    required VoidCallback onObscureToggle,
-    required ColorScheme colorScheme,
-    required TextTheme textTheme,
-    String? helperText,
-  }) {
-    return Focus(
-      focusNode: focusNode,
-      onKeyEvent: (node, event) {
-        if (event.logicalKey == LogicalKeyboardKey.enter) {
-          _handleDoctorRegistration();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(
-                textField: true,
-                enabled: true,
-                label: labelText,
-                onTap: () => focusNode.requestFocus(),
-                child: TextField(
-                  focusNode: focusNode,
-                  controller: controller,
-                  obscureText: obscure,
-                  textInputAction: TextInputAction.next,
-                  style: textTheme.bodyLarge,
-                  decoration: InputDecoration(
-                    labelText: labelText,
-                    hintText: hintText,
-                    prefixIcon: Icon(
-                      Icons.lock,
-                      color: isFocused
-                          ? colorScheme.primary
-                          : colorScheme.outline,
-                    ),
-                    suffixIcon: Semantics(
-                      button: true,
-                      enabled: true,
-                      label: obscure ? 'Show password' : 'Hide password',
-                      onTap: onObscureToggle,
-                      child: IconButton(
-                        icon: Icon(
-                          obscure ? Icons.visibility_off : Icons.visibility,
-                          color: colorScheme.primary,
-                        ),
-                        onPressed: onObscureToggle,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (helperText != null) ...[
-                const SizedBox(height: 8),
-                Semantics(
-                  label: helperText,
-                  enabled: true,
-                  child: Text(helperText, style: textTheme.labelMedium),
-                ),
-              ],
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildAccessibleButton({
-    required FocusNode focusNode,
-    required String label,
-    required VoidCallback? onPressed,
-    required ColorScheme colorScheme,
-    required TextTheme textTheme,
-    bool isLoading = false,
-  }) {
-    final isEnabled = onPressed != null && !isLoading;
-
-    return Semantics(
-      button: true,
-      enabled: isEnabled,
-      onTap: onPressed,
-      label: label,
-      child: Focus(
-        focusNode: focusNode,
-        onKeyEvent: (node, event) {
-          if (isEnabled &&
-              (event.logicalKey == LogicalKeyboardKey.enter ||
-                  event.logicalKey == LogicalKeyboardKey.space)) {
-            onPressed();
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: GestureDetector(
-          onTap: isEnabled ? onPressed : null,
-          child: Builder(
-            builder: (context) {
-              final isFocused = Focus.of(context).hasFocus;
-              return Container(
-                width: double.infinity,
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: isEnabled
-                      ? LinearGradient(
-                          colors: [colorScheme.primary, colorScheme.secondary],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  color: !isEnabled
-                      ? colorScheme.surfaceContainerHighest
-                      : null,
-                  borderRadius: BorderRadius.circular(8),
-                  border: isFocused
-                      ? Border.all(color: colorScheme.primary, width: 2)
-                      : null,
-                  boxShadow: isEnabled
-                      ? [
-                          BoxShadow(
-                            color: colorScheme.primary.withAlpha(50),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Center(
-                  child: isLoading
-                      ? SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              colorScheme.onPrimary,
-                            ),
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          label,
-                          style: textTheme.labelLarge?.copyWith(
-                            color: isEnabled
-                                ? colorScheme.onPrimary
-                                : colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                ),
-              );
-            },
           ),
         ),
       ),
