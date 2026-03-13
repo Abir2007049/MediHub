@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:medihub/services/bmdc_license_verification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../blocs/auth/auth_cubit.dart';
-import '../services/bmdc_license_verification_service.dart';
 import '../services/supabase_auth_service.dart';
 
 class DoctorAuthScreen extends StatefulWidget {
@@ -17,36 +19,50 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
   final _auth = SupabaseAuthService.instance;
 
   bool _isLogin = true;
-  int _registrationStep = 1;
+  int _registrationStep = 1; // 1-3 for registration
   bool _loading = false;
 
-  // Login controllers
   late TextEditingController _loginEmailController;
   late TextEditingController _loginPasswordController;
+  bool _obscureLoginPassword = true;
 
-  // Registration Step 1 controllers
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
   late TextEditingController _nidController;
   late TextEditingController _licenseController;
 
-  // Registration Step 2 controllers
   late TextEditingController _passwordController;
   late TextEditingController _confirmPasswordController;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   late TextEditingController _specializationController;
   late TextEditingController _hospitalController;
   late TextEditingController _departmentController;
   late TextEditingController _degreeController;
   late TextEditingController _medicalCollegeController;
 
-  bool _obscureLoginPassword = true;
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
+  String _errorMessage = '';
+
+  late FocusNode _primaryFocusNode;
+  late FocusNode _secondaryFocusNode;
+  late FocusNode _submitButtonFocus;
 
   @override
   void initState() {
     super.initState();
+    _initializeControllers();
+    _primaryFocusNode = FocusNode();
+    _secondaryFocusNode = FocusNode();
+    _submitButtonFocus = FocusNode();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _announceScreen();
+    });
+  }
+
+  void _initializeControllers() {
     _loginEmailController = TextEditingController();
     _loginPasswordController = TextEditingController();
     _nameController = TextEditingController();
@@ -65,6 +81,14 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
 
   @override
   void dispose() {
+    _clearControllers();
+    _primaryFocusNode.dispose();
+    _secondaryFocusNode.dispose();
+    _submitButtonFocus.dispose();
+    super.dispose();
+  }
+
+  void _clearControllers() {
     _loginEmailController.dispose();
     _loginPasswordController.dispose();
     _nameController.dispose();
@@ -79,687 +103,286 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
     _departmentController.dispose();
     _degreeController.dispose();
     _medicalCollegeController.dispose();
-    super.dispose();
   }
 
-  // ─── Login ─────────────────────────────────────────────────
+  void _announceScreen() {
+    String announcement = '';
+    if (_isLogin) {
+      announcement = 'Doctor sign-in screen. Enter your email and password.';
+    } else {
+      announcement =
+          'Doctor registration step $_registrationStep of 3. ${_getRegistrationStepTitle()}';
+    }
+    _announceFeedback(announcement);
+  }
+
+  String _getRegistrationStepTitle() {
+    switch (_registrationStep) {
+      case 1:
+        return 'Enter your basic information: name, email, phone, NID, and license number.';
+      case 2:
+        return 'Create a secure password.';
+      case 3:
+        return 'Enter your professional credentials: specialization, hospital, department, degree, and medical college.';
+      default:
+        return '';
+    }
+  }
 
   Future<void> _handleDoctorLogin() async {
     final email = _loginEmailController.text.trim();
     final password = _loginPasswordController.text.trim();
 
+    setState(() => _errorMessage = '');
+
     if (email.isEmpty || password.isEmpty) {
-      _showSnackBar('Please fill all fields', Colors.red);
+      setState(() => _errorMessage = 'Please fill all fields');
+      _announceFeedback('Error: Please fill all fields');
       return;
     }
 
     setState(() => _loading = true);
     try {
-      final response = await _auth.signInDoctor(
-        email: email,
-        password: password,
-      );
-
-      final user = response.user;
-      if (user == null) {
-        _showSnackBar('Login failed', Colors.red);
-        return;
-      }
-
-      // Fetch doctor profile from DB
-      final profile = await _auth.getDoctorProfile(user.id);
-
-      if (profile == null) {
-        _showSnackBar('Doctor profile not found', Colors.red);
-        return;
-      }
-
-      _showSnackBar('Welcome ${profile['full_name']}!', Colors.green);
+      await _auth.signInDoctor(email: email, password: password);
+      _announceFeedback('Sign-in successful. Redirecting to dashboard...');
       if (mounted) {
         await context.read<AuthCubit>().checkSession();
-      }
-      Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           context.go('/doctor');
         }
-      });
+      }
     } on AuthException catch (e) {
-      _showSnackBar(e.message, Colors.red);
+      if (mounted) setState(() => _errorMessage = e.message);
+      _announceFeedback('Error: ${e.message}');
     } catch (e) {
-      _showSnackBar('Login failed. Please try again.', Colors.red);
+      if (mounted) setState(() => _errorMessage = 'Failed to sign in');
+      _announceFeedback('Error: Failed to sign in');
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  // ─── Registration Step 1 ───────────────────────────────────
-
-  Future<void> _handleRegistrationStep1() async {
-    final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final phone = _phoneController.text.trim();
-    final nid = _nidController.text.trim();
-    final license = _licenseController.text.trim();
-
-    if (name.isEmpty ||
-        email.isEmpty ||
-        phone.isEmpty ||
-        nid.isEmpty ||
-        license.isEmpty) {
-      _showSnackBar('Please fill all fields', Colors.red);
-      return;
-    }
-
-    if (nid.length != 13 || !nid.contains(RegExp(r'^[0-9]+$'))) {
-      _showSnackBar('NID must be 13 digits', Colors.red);
-      return;
-    }
-
-    if (!email.contains('@')) {
-      _showSnackBar('Please enter a valid email', Colors.red);
-      return;
-    }
-
-    setState(() => _loading = true);
-    try {
-      final bmdcResult = await BmdcLicenseVerificationService.verify(license);
-      if (!bmdcResult.isValid) {
-        _showSnackBar(bmdcResult.message, Colors.red);
+  Future<void> _handleDoctorRegistration() async {
+    if (_registrationStep == 1) {
+      if (_nameController.text.isEmpty ||
+          _emailController.text.isEmpty ||
+          _phoneController.text.isEmpty ||
+          _nidController.text.isEmpty ||
+          _licenseController.text.isEmpty) {
+        setState(() => _errorMessage = 'Please fill all required fields');
+        _announceFeedback('Error: Please fill all required fields');
         return;
       }
-
-      _licenseController.text = bmdcResult.normalizedLicense;
-
-      setState(() {
-        _registrationStep = 2;
+      setState(() => _registrationStep = 2);
+      _announceScreen();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _primaryFocusNode.requestFocus();
       });
-      _showSnackBar('BMDC license verified. Proceed to step 2', Colors.green);
-    } catch (e) {
-      _showSnackBar('License verification failed: $e', Colors.red);
-    } finally {
-      setState(() => _loading = false);
-    }
-  }
-
-  // ─── Registration Step 2 ───────────────────────────────────
-
-  Future<void> _handleRegistrationStep2() async {
-    final password = _passwordController.text.trim();
-    final confirmPassword = _confirmPasswordController.text.trim();
-    final specialization = _specializationController.text.trim();
-    final degree = _degreeController.text.trim();
-    final medicalCollege = _medicalCollegeController.text.trim();
-
-    if (password.isEmpty ||
-        confirmPassword.isEmpty ||
-        specialization.isEmpty ||
-        degree.isEmpty ||
-        medicalCollege.isEmpty) {
-      _showSnackBar('Please fill all required fields', Colors.red);
-      return;
-    }
-
-    if (password.length < 6) {
-      _showSnackBar('Password must be at least 6 characters', Colors.red);
-      return;
-    }
-
-    if (password != confirmPassword) {
-      _showSnackBar('Passwords do not match', Colors.red);
-      return;
-    }
-
-    setState(() => _loading = true);
-    try {
-      // 1. Create auth user
-      final response = await _auth.signUpDoctor(
-        email: _emailController.text.trim(),
-        password: password,
-      );
-
-      final user = response.user;
-      if (user == null) {
-        _showSnackBar('Registration failed', Colors.red);
+    } else if (_registrationStep == 2) {
+      if (_passwordController.text.isEmpty ||
+          _confirmPasswordController.text.isEmpty) {
+        setState(() => _errorMessage = 'Please enter a password');
+        _announceFeedback('Error: Please enter a password');
+        return;
+      }
+      if (_passwordController.text != _confirmPasswordController.text) {
+        setState(() => _errorMessage = 'Passwords do not match');
+        _announceFeedback('Error: Passwords do not match');
+        return;
+      }
+      if (_passwordController.text.length < 8) {
+        setState(
+          () => _errorMessage = 'Password must be at least 8 characters',
+        );
+        _announceFeedback('Error: Password must be at least 8 characters');
+        return;
+      }
+      setState(() => _registrationStep = 3);
+      _announceScreen();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _primaryFocusNode.requestFocus();
+      });
+    } else if (_registrationStep == 3) {
+      if (_specializationController.text.isEmpty ||
+          _hospitalController.text.isEmpty ||
+          _departmentController.text.isEmpty ||
+          _degreeController.text.isEmpty ||
+          _medicalCollegeController.text.isEmpty) {
+        setState(() => _errorMessage = 'Please fill all professional fields');
+        _announceFeedback('Error: Please fill all professional fields');
         return;
       }
 
-      // 2. Create doctor profile row in DB
-      await _auth.createDoctorProfile(
-        userId: user.id,
-        fullName: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        phone: _phoneController.text.trim(),
-        nid: _nidController.text.trim(),
-        license: _licenseController.text.trim(),
-        specialization: specialization,
-        hospital: _hospitalController.text.trim(),
-        department: _departmentController.text.trim(),
-        degree: degree,
-        medicalCollege: medicalCollege,
-      );
+      setState(() => _loading = true);
+      try {
+        final result = await BmdcLicenseVerificationService.verify(
+          _licenseController.text.trim(),
+        );
 
-      _showSnackBar(
-        'Account created! Check your email to confirm, then login.',
-        Colors.green,
-      );
-
-      // Sign out so they can confirm email and login fresh
-      await _auth.signOut();
-
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() {
-            _isLogin = true;
-            _registrationStep = 1;
-            _clearControllers();
-          });
+        if (!result.isValid) {
+          setState(
+            () => _errorMessage =
+                'License verification failed. Please check your credentials.',
+          );
+          _announceFeedback(
+            'Error: License verification failed. Please check your credentials.',
+          );
+          return;
         }
-      });
-    } on AuthException catch (e) {
-      _showSnackBar(e.message, Colors.red);
-    } on PostgrestException catch (e) {
-      _showSnackBar(e.message, Colors.red);
-    } catch (e) {
-      _showSnackBar('Registration failed. Please try again.', Colors.red);
-    } finally {
-      setState(() => _loading = false);
+
+        await _auth.signUpDoctor(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          nid: _nidController.text.trim(),
+          licenseNumber: _licenseController.text.trim(),
+          specialization: _specializationController.text.trim(),
+          hospital: _hospitalController.text.trim(),
+          department: _departmentController.text.trim(),
+          degree: _degreeController.text.trim(),
+          medicalCollege: _medicalCollegeController.text.trim(),
+        );
+
+        _announceFeedback(
+          'Registration successful! Signing in and redirecting to dashboard...',
+        );
+        if (mounted) {
+          await context.read<AuthCubit>().checkSession();
+          if (mounted) {
+            context.go('/doctor');
+          }
+        }
+      } on AuthException catch (e) {
+        if (mounted) setState(() => _errorMessage = e.message);
+        _announceFeedback('Error: ${e.message}');
+      } catch (e) {
+        if (mounted) {
+          setState(() => _errorMessage = 'Registration failed. Try again.');
+        }
+        _announceFeedback('Error: Registration failed. Please try again.');
+      } finally {
+        if (mounted) setState(() => _loading = false);
+      }
     }
   }
 
-  // ─── Helpers ───────────────────────────────────────────────
-
-  void _clearControllers() {
-    _loginEmailController.clear();
-    _loginPasswordController.clear();
-    _nameController.clear();
-    _emailController.clear();
-    _phoneController.clear();
-    _nidController.clear();
-    _licenseController.clear();
-    _passwordController.clear();
-    _confirmPasswordController.clear();
-    _specializationController.clear();
-    _hospitalController.clear();
-    _departmentController.clear();
-    _degreeController.clear();
-    _medicalCollegeController.clear();
-  }
-
-  void _showSnackBar(String message, Color bgColor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: bgColor,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  void _announceFeedback(String message) {
+    if (!mounted) return;
+    final view = View.of(context);
+    SemanticsService.sendAnnouncement(view, message, TextDirection.ltr);
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
+      appBar: AppBar(
+        leading: Semantics(
+          button: true,
+          enabled: true,
+          label: 'Go back',
+          onTap: () {
+            if (_isLogin) {
+              context.pop();
+            } else if (_registrationStep > 1) {
+              setState(() => _registrationStep--);
+              _announceScreen();
+            } else {
+              setState(() => _isLogin = true);
+              _announceScreen();
+            }
+          },
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            iconSize: 28,
+            onPressed: () {
+              if (_isLogin) {
+                context.pop();
+              } else if (_registrationStep > 1) {
+                setState(() => _registrationStep--);
+                _announceScreen();
+              } else {
+                setState(() => _isLogin = true);
+                _announceScreen();
+              }
+            },
+          ),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Header
-                Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.green.shade400,
-                              Colors.green.shade600,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.green.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.medical_services,
-                          size: 40,
-                          color: Colors.white,
-                        ),
+                // Logo
+                Semantics(
+                  image: true,
+                  label: 'MediHub logo',
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [colorScheme.primary, colorScheme.secondary],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'MediHub Doctors',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Manage Your Practice',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 30),
-
-                // Tab Switcher
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _isLogin = true;
-                              _registrationStep = 1;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _isLogin
-                                  ? Colors.white
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: _isLogin
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 4,
-                                      ),
-                                    ]
-                                  : [],
-                            ),
-                            child: Center(
-                              child: Text(
-                                'Login',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: _isLogin
-                                      ? Colors.green
-                                      : Colors.grey.shade600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _isLogin = false;
-                              _registrationStep = 1;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: !_isLogin
-                                  ? Colors.white
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: !_isLogin
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 4,
-                                      ),
-                                    ]
-                                  : [],
-                            ),
-                            child: Center(
-                              child: Text(
-                                'Register',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: !_isLogin
-                                      ? Colors.green
-                                      : Colors.grey.shade600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 30),
-
-                // Login Form
-                if (_isLogin) ...[
-                  Text(
-                    'Email',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _loginEmailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      hintText: 'Enter your email',
-                      prefixIcon: const Icon(Icons.email),
-                      prefixIconColor: Colors.green,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.green,
-                          width: 2,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Password',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _loginPasswordController,
-                    obscureText: _obscureLoginPassword,
-                    decoration: InputDecoration(
-                      hintText: 'Enter your password',
-                      prefixIcon: const Icon(Icons.lock),
-                      prefixIconColor: Colors.green,
-                      suffixIcon: GestureDetector(
-                        onTap: () => setState(
-                          () => _obscureLoginPassword = !_obscureLoginPassword,
-                        ),
-                        child: Icon(
-                          _obscureLoginPassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: Colors.green,
-                        ),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.green,
-                          width: 2,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _loading ? null : _handleDoctorLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      minimumSize: const Size(double.infinity, 56),
-                      elevation: 4,
-                    ),
-                    child: _loading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.arrow_forward, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                'Login',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ] else ...[
-                  // Registration Form
-                  if (_registrationStep == 1) ...[
-                    // Step 1: Basic Info
-                    const Text(
-                      'Step 1: Basic Information',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField('Full Name', _nameController, Icons.person),
-                    const SizedBox(height: 12),
-                    _buildTextField('Email', _emailController, Icons.email),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      'Phone Number',
-                      _phoneController,
-                      Icons.phone,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      'NID Number (13 digits)',
-                      _nidController,
-                      Icons.badge,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      'BMDC License (e.g., A-12345)',
-                      _licenseController,
-                      Icons.card_membership,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _handleRegistrationStep1,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        minimumSize: const Size(double.infinity, 56),
-                        elevation: 4,
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Next',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, color: Colors.white),
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    // Step 2: Credentials & Professional Info
-                    const Text(
-                      'Step 2: Professional Information',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      'Password',
-                      _passwordController,
-                      Icons.lock,
-                      obscure: _obscurePassword,
-                      onToggleObscure: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      'Confirm Password',
-                      _confirmPasswordController,
-                      Icons.lock,
-                      obscure: _obscureConfirmPassword,
-                      onToggleObscure: () => setState(
-                        () =>
-                            _obscureConfirmPassword = !_obscureConfirmPassword,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      'Specialization',
-                      _specializationController,
-                      Icons.healing,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      'Degree (e.g., MBBS, MD)',
-                      _degreeController,
-                      Icons.school,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      'Medical College',
-                      _medicalCollegeController,
-                      Icons.apartment,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      'Current Hospital (Optional)',
-                      _hospitalController,
-                      Icons.local_hospital,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      'Department (Optional)',
-                      _departmentController,
-                      Icons.domain,
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              setState(() {
-                                _registrationStep = 1;
-                              });
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.green,
-                              side: const BorderSide(color: Colors.green),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Icon(Icons.arrow_back),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: ElevatedButton(
-                            onPressed: _loading
-                                ? null
-                                : _handleRegistrationStep2,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: _loading
-                                ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2.5,
-                                    ),
-                                  )
-                                : const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        'Create Account',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      SizedBox(width: 8),
-                                      Icon(
-                                        Icons.check_circle,
-                                        color: Colors.white,
-                                      ),
-                                    ],
-                                  ),
-                          ),
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withAlpha(50),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
-                  ],
-                ],
+                    child: Icon(
+                      Icons.local_hospital,
+                      size: 40,
+                      color: colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 24),
+
+                Semantics(
+                  header: true,
+                  child: Text(
+                    _isLogin ? 'Doctor Sign In' : 'Doctor Registration',
+                    style: textTheme.displaySmall,
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                if (!_isLogin)
+                  ..._buildProgressIndicator(colorScheme, textTheme),
+
+                if (!_isLogin) const SizedBox(height: 32),
+
+                // Error
+                if (_errorMessage.isNotEmpty)
+                  ..._buildErrorWidget(_errorMessage, colorScheme),
+                if (_errorMessage.isNotEmpty) const SizedBox(height: 24),
+
+                // Forms
+                if (_isLogin)
+                  ..._buildLoginForm(colorScheme, textTheme)
+                else if (_registrationStep == 1)
+                  ..._buildRegistrationStep1(colorScheme, textTheme)
+                else if (_registrationStep == 2)
+                  ..._buildRegistrationStep2(colorScheme, textTheme)
+                else if (_registrationStep == 3)
+                  ..._buildRegistrationStep3(colorScheme, textTheme),
+
+                const SizedBox(height: 32),
+
+                // Toggle
+                _buildToggleAuthMode(colorScheme, textTheme),
               ],
             ),
           ),
@@ -768,55 +391,612 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
     );
   }
 
-  Widget _buildTextField(
-    String label,
-    TextEditingController controller,
-    IconData icon, {
-    bool obscure = false,
-    VoidCallback? onToggleObscure,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          obscureText: obscure,
-          decoration: InputDecoration(
-            hintText: 'Enter $label',
-            prefixIcon: Icon(icon),
-            prefixIconColor: Colors.green,
-            suffixIcon: onToggleObscure != null
-                ? GestureDetector(
-                    onTap: onToggleObscure,
-                    child: Icon(
-                      obscure ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.green,
+  List<Widget> _buildProgressIndicator(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return [
+      Semantics(
+        label: 'Registration progress: Step $_registrationStep of 3',
+        enabled: true,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (i) {
+            final isActive = i < _registrationStep;
+            return Expanded(
+              child: Row(
+                children: [
+                  Semantics(
+                    label:
+                        'Step ${i + 1}, ${isActive ? "completed" : "pending"}',
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isActive
+                            ? colorScheme.primary
+                            : colorScheme.surfaceContainerHighest,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${i + 1}',
+                          style: TextStyle(
+                            color: isActive
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                  )
-                : null,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.green, width: 2),
-            ),
-            filled: true,
-            fillColor: Colors.grey.shade50,
+                  ),
+                  if (i < 2)
+                    Expanded(
+                      child: Container(
+                        height: 2,
+                        color: i < _registrationStep - 1
+                            ? colorScheme.primary
+                            : colorScheme.outlineVariant,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildErrorWidget(String message, ColorScheme colorScheme) {
+    return [
+      Semantics(
+        enabled: true,
+        label: 'Error message: $message',
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.error.withAlpha(26),
+            border: Border.all(color: colorScheme.error, width: 2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline, color: colorScheme.error, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.error,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
+    ];
+  }
+
+  List<Widget> _buildLoginForm(ColorScheme colorScheme, TextTheme textTheme) {
+    return [
+      _buildAccessibleTextField(
+        focusNode: _primaryFocusNode,
+        controller: _loginEmailController,
+        labelText: 'Email Address',
+        hintText: 'doctor@example.com',
+        prefixIcon: Icons.email,
+        keyboardType: TextInputType.emailAddress,
+        helperText: 'Enter your registered email address',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 20),
+      _buildAccessiblePasswordField(
+        focusNode: _secondaryFocusNode,
+        controller: _loginPasswordController,
+        labelText: 'Password',
+        hintText: '••••••••',
+        obscure: _obscureLoginPassword,
+        onObscureToggle: () {
+          setState(() => _obscureLoginPassword = !_obscureLoginPassword);
+          _announceFeedback(
+            _obscureLoginPassword ? 'Password hidden' : 'Password visible',
+          );
+        },
+        helperText: 'Enter your password',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 32),
+      _buildAccessibleButton(
+        focusNode: _submitButtonFocus,
+        label: 'Sign In',
+        onPressed: _loading ? null : _handleDoctorLogin,
+        isLoading: _loading,
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+    ];
+  }
+
+  List<Widget> _buildRegistrationStep1(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return [
+      _buildAccessibleTextField(
+        focusNode: _primaryFocusNode,
+        controller: _nameController,
+        labelText: 'Full Name',
+        hintText: 'Dr. John Doe',
+        prefixIcon: Icons.person,
+        keyboardType: TextInputType.name,
+        helperText: 'Enter your full name as on BMDC certificate',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 16),
+      _buildAccessibleTextField(
+        focusNode: _secondaryFocusNode,
+        controller: _emailController,
+        labelText: 'Email Address',
+        hintText: 'doctor@example.com',
+        prefixIcon: Icons.email,
+        keyboardType: TextInputType.emailAddress,
+        helperText: 'Use a professional email address',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 16),
+      _buildAccessibleTextField(
+        focusNode: FocusNode(),
+        controller: _phoneController,
+        labelText: 'Phone Number',
+        hintText: '01XXXXXXXXX',
+        prefixIcon: Icons.phone,
+        keyboardType: TextInputType.phone,
+        maxLength: 11,
+        helperText: 'Bangladesh phone number (11 digits starting with 01)',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 16),
+      _buildAccessibleTextField(
+        focusNode: FocusNode(),
+        controller: _nidController,
+        labelText: 'NID Number',
+        hintText: '12345678901234',
+        prefixIcon: Icons.badge,
+        keyboardType: TextInputType.number,
+        maxLength: 17,
+        helperText: 'Enter your 13 or 17-digit National ID number',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 16),
+      _buildAccessibleTextField(
+        focusNode: FocusNode(),
+        controller: _licenseController,
+        labelText: 'BMDC License Number',
+        hintText: 'A-12345',
+        prefixIcon: Icons.card_travel,
+        helperText: 'Enter your BMDC license number',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 32),
+      _buildAccessibleButton(
+        focusNode: _submitButtonFocus,
+        label: 'Continue to Password',
+        onPressed: _loading ? null : _handleDoctorRegistration,
+        isLoading: _loading,
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+    ];
+  }
+
+  List<Widget> _buildRegistrationStep2(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return [
+      _buildAccessiblePasswordField(
+        focusNode: _primaryFocusNode,
+        controller: _passwordController,
+        labelText: 'Password',
+        hintText: '••••••••',
+        obscure: _obscurePassword,
+        onObscureToggle: () {
+          setState(() => _obscurePassword = !_obscurePassword);
+          _announceFeedback(
+            _obscurePassword ? 'Password hidden' : 'Password visible',
+          );
+        },
+        helperText:
+            'At least 8 characters with uppercase, lowercase, and number',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 20),
+      _buildAccessiblePasswordField(
+        focusNode: _secondaryFocusNode,
+        controller: _confirmPasswordController,
+        labelText: 'Confirm Password',
+        hintText: '••••••••',
+        obscure: _obscureConfirmPassword,
+        onObscureToggle: () {
+          setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+          _announceFeedback(
+            _obscureConfirmPassword
+                ? 'Confirm password hidden'
+                : 'Confirm password visible',
+          );
+        },
+        helperText: 'Passwords must match',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 32),
+      _buildAccessibleButton(
+        focusNode: _submitButtonFocus,
+        label: 'Continue to Credentials',
+        onPressed: _loading ? null : _handleDoctorRegistration,
+        isLoading: _loading,
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+    ];
+  }
+
+  List<Widget> _buildRegistrationStep3(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return [
+      _buildAccessibleTextField(
+        focusNode: _primaryFocusNode,
+        controller: _specializationController,
+        labelText: 'Specialization',
+        hintText: 'Cardiology',
+        prefixIcon: Icons.medical_services,
+        helperText: 'Your primary area of specialization',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 16),
+      _buildAccessibleTextField(
+        focusNode: _secondaryFocusNode,
+        controller: _hospitalController,
+        labelText: 'Hospital/Clinic Name',
+        hintText: 'ABC Medical Center',
+        prefixIcon: Icons.local_hospital,
+        helperText: 'Current or primary hospital/clinic affiliation',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 16),
+      _buildAccessibleTextField(
+        focusNode: FocusNode(),
+        controller: _departmentController,
+        labelText: 'Department',
+        hintText: 'Cardiology Department',
+        prefixIcon: Icons.category,
+        helperText: 'Your department at the hospital/clinic',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 16),
+      _buildAccessibleTextField(
+        focusNode: FocusNode(),
+        controller: _degreeController,
+        labelText: 'Highest Degree',
+        hintText: 'MBBS, MD Cardiology',
+        prefixIcon: Icons.school,
+        helperText: 'Your highest medical degree',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 16),
+      _buildAccessibleTextField(
+        focusNode: FocusNode(),
+        controller: _medicalCollegeController,
+        labelText: 'Medical College',
+        hintText: 'Medical College',
+        prefixIcon: Icons.local_hospital,
+        helperText: 'Medical college where you graduated',
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+      const SizedBox(height: 32),
+      _buildAccessibleButton(
+        focusNode: _submitButtonFocus,
+        label: 'Complete Registration',
+        onPressed: _loading ? null : _handleDoctorRegistration,
+        isLoading: _loading,
+        colorScheme: colorScheme,
+        textTheme: textTheme,
+      ),
+    ];
+  }
+
+  Widget _buildToggleAuthMode(ColorScheme colorScheme, TextTheme textTheme) {
+    return Semantics(
+      label: _isLogin
+          ? 'Do not have an account? Tap to register'
+          : 'Already have an account? Tap to sign in',
+      enabled: true,
+      onTap: () {
+        setState(() {
+          _isLogin = !_isLogin;
+          _registrationStep = 1;
+        });
+        _announceScreen();
+      },
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _isLogin = !_isLogin;
+            _registrationStep = 1;
+          });
+          _announceScreen();
+        },
+        child: RichText(
+          text: TextSpan(
+            style: textTheme.bodySmall,
+            children: [
+              TextSpan(
+                text: _isLogin
+                    ? 'Don\'t have an account? '
+                    : 'Already have an account? ',
+              ),
+              TextSpan(
+                text: _isLogin ? 'Register here' : 'Sign in',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccessibleTextField({
+    required FocusNode focusNode,
+    required TextEditingController controller,
+    required String labelText,
+    required String hintText,
+    required IconData prefixIcon,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+    TextInputType keyboardType = TextInputType.text,
+    int? maxLength,
+    String? helperText,
+  }) {
+    return Focus(
+      focusNode: focusNode,
+      onKeyEvent: (node, event) {
+        if (event.logicalKey == LogicalKeyboardKey.enter) {
+          _handleDoctorRegistration();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                textField: true,
+                enabled: true,
+                label: labelText,
+                onTap: () => focusNode.requestFocus(),
+                child: TextField(
+                  focusNode: focusNode,
+                  controller: controller,
+                  keyboardType: keyboardType,
+                  maxLength: maxLength,
+                  textInputAction: TextInputAction.next,
+                  style: textTheme.bodyLarge,
+                  decoration: InputDecoration(
+                    labelText: labelText,
+                    hintText: hintText,
+                    prefixIcon: Icon(
+                      prefixIcon,
+                      color: isFocused
+                          ? colorScheme.primary
+                          : colorScheme.outline,
+                    ),
+                  ),
+                ),
+              ),
+              if (helperText != null) ...[
+                const SizedBox(height: 8),
+                Semantics(
+                  label: helperText,
+                  enabled: true,
+                  child: Text(helperText, style: textTheme.labelMedium),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAccessiblePasswordField({
+    required FocusNode focusNode,
+    required TextEditingController controller,
+    required String labelText,
+    required String hintText,
+    required bool obscure,
+    required VoidCallback onObscureToggle,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+    String? helperText,
+  }) {
+    return Focus(
+      focusNode: focusNode,
+      onKeyEvent: (node, event) {
+        if (event.logicalKey == LogicalKeyboardKey.enter) {
+          _handleDoctorRegistration();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                textField: true,
+                enabled: true,
+                label: labelText,
+                onTap: () => focusNode.requestFocus(),
+                child: TextField(
+                  focusNode: focusNode,
+                  controller: controller,
+                  obscureText: obscure,
+                  textInputAction: TextInputAction.next,
+                  style: textTheme.bodyLarge,
+                  decoration: InputDecoration(
+                    labelText: labelText,
+                    hintText: hintText,
+                    prefixIcon: Icon(
+                      Icons.lock,
+                      color: isFocused
+                          ? colorScheme.primary
+                          : colorScheme.outline,
+                    ),
+                    suffixIcon: Semantics(
+                      button: true,
+                      enabled: true,
+                      label: obscure ? 'Show password' : 'Hide password',
+                      onTap: onObscureToggle,
+                      child: IconButton(
+                        icon: Icon(
+                          obscure ? Icons.visibility_off : Icons.visibility,
+                          color: colorScheme.primary,
+                        ),
+                        onPressed: onObscureToggle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (helperText != null) ...[
+                const SizedBox(height: 8),
+                Semantics(
+                  label: helperText,
+                  enabled: true,
+                  child: Text(helperText, style: textTheme.labelMedium),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAccessibleButton({
+    required FocusNode focusNode,
+    required String label,
+    required VoidCallback? onPressed,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+    bool isLoading = false,
+  }) {
+    final isEnabled = onPressed != null && !isLoading;
+
+    return Semantics(
+      button: true,
+      enabled: isEnabled,
+      onTap: onPressed,
+      label: label,
+      child: Focus(
+        focusNode: focusNode,
+        onKeyEvent: (node, event) {
+          if (isEnabled &&
+              (event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.space)) {
+            onPressed();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: GestureDetector(
+          onTap: isEnabled ? onPressed : null,
+          child: Builder(
+            builder: (context) {
+              final isFocused = Focus.of(context).hasFocus;
+              return Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: isEnabled
+                      ? LinearGradient(
+                          colors: [colorScheme.primary, colorScheme.secondary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: !isEnabled
+                      ? colorScheme.surfaceContainerHighest
+                      : null,
+                  borderRadius: BorderRadius.circular(8),
+                  border: isFocused
+                      ? Border.all(color: colorScheme.primary, width: 2)
+                      : null,
+                  boxShadow: isEnabled
+                      ? [
+                          BoxShadow(
+                            color: colorScheme.primary.withAlpha(50),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: isLoading
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              colorScheme.onPrimary,
+                            ),
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          label,
+                          style: textTheme.labelLarge?.copyWith(
+                            color: isEnabled
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }

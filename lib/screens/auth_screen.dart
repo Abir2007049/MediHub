@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -16,7 +18,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _auth = SupabaseAuthService.instance;
 
-  // Steps: 0 = phone input, 1 = OTP verification, 2 = name (new user)
+  /// Steps: 0 = phone input, 1 = OTP verification, 2 = name (new user)
   int _step = 0;
   bool _loading = false;
 
@@ -25,6 +27,12 @@ class _AuthScreenState extends State<AuthScreen> {
   late TextEditingController _nameController;
 
   String _formattedPhone = '';
+  String _errorMessage = '';
+
+  late FocusNode _phoneFocusNode;
+  late FocusNode _otpFocusNode;
+  late FocusNode _nameFocusNode;
+  late FocusNode _submitButtonFocus;
 
   @override
   void initState() {
@@ -32,6 +40,15 @@ class _AuthScreenState extends State<AuthScreen> {
     _phoneController = TextEditingController();
     _otpController = TextEditingController();
     _nameController = TextEditingController();
+
+    _phoneFocusNode = FocusNode();
+    _otpFocusNode = FocusNode();
+    _nameFocusNode = FocusNode();
+    _submitButtonFocus = FocusNode();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _announceStep();
+    });
   }
 
   @override
@@ -39,35 +56,59 @@ class _AuthScreenState extends State<AuthScreen> {
     _phoneController.dispose();
     _otpController.dispose();
     _nameController.dispose();
+    _phoneFocusNode.dispose();
+    _otpFocusNode.dispose();
+    _nameFocusNode.dispose();
+    _submitButtonFocus.dispose();
     super.dispose();
   }
 
-  /// Convert local BD number (01XXXXXXXXX) to E.164 (+880XXXXXXXXX).
+  void _announceStep() {
+    String announcement = '';
+    switch (_step) {
+      case 0:
+        announcement = 'Step 1 of 3: Enter your phone number';
+        break;
+      case 1:
+        announcement =
+            'Step 2 of 3: Enter the 6-digit verification code sent to $_formattedPhone';
+        break;
+      case 2:
+        announcement = 'Step 3 of 3: Enter your full name';
+        break;
+    }
+    _announceFeedback(announcement);
+  }
+
   String _toE164(String local) {
     final digits = local.replaceAll(RegExp(r'\D'), '');
     if (digits.startsWith('0')) {
-      return '+88$digits';
+      return '+88';
     }
     if (digits.startsWith('880')) {
-      return '+$digits';
+      return '+';
     }
-    return '+880$digits';
+    return '+880';
   }
-
-  // ─── Step 0: Request OTP ───────────────────────────────────
 
   Future<void> _sendOtp() async {
     final phone = _phoneController.text.trim();
 
+    setState(() => _errorMessage = '');
+
     if (phone.isEmpty) {
-      _showSnackBar('Please enter your mobile number', Colors.red);
+      setState(() => _errorMessage = 'Please enter your mobile number');
+      _announceFeedback('Error: Please enter your mobile number');
       return;
     }
 
     if (phone.length != 11 || !phone.startsWith('01')) {
-      _showSnackBar(
-        'Mobile number must be 11 digits starting with 01',
-        Colors.red,
+      setState(
+        () =>
+            _errorMessage = 'Mobile number must be 11 digits starting with 01',
+      );
+      _announceFeedback(
+        'Error: Mobile number must be 11 digits starting with 01',
       );
       return;
     }
@@ -78,23 +119,32 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       await _auth.sendOtp(phone: _formattedPhone);
       setState(() => _step = 1);
-      _showSnackBar('OTP sent to $phone', Colors.green);
+      _announceFeedback(
+        'OTP sent successfully to $_formattedPhone. Check your messages.',
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _otpFocusNode.requestFocus();
+        _announceStep();
+      });
     } on AuthException catch (e) {
-      _showSnackBar(e.message, Colors.red);
+      setState(() => _errorMessage = e.message);
+      _announceFeedback('Error: ');
     } catch (e) {
-      _showSnackBar('Failed to send OTP. Please try again.', Colors.red);
+      setState(() => _errorMessage = 'Failed to send OTP. Please try again.');
+      _announceFeedback('Error: Failed to send OTP. Please try again.');
     } finally {
       setState(() => _loading = false);
     }
   }
 
-  // ─── Step 1: Verify OTP ────────────────────────────────────
-
   Future<void> _verifyOtp() async {
     final token = _otpController.text.trim();
 
+    setState(() => _errorMessage = '');
+
     if (token.isEmpty || token.length != 6) {
-      _showSnackBar('Please enter the 6-digit code', Colors.red);
+      setState(() => _errorMessage = 'Please enter the 6-digit code');
+      _announceFeedback('Error: Please enter the 6-digit code');
       return;
     }
 
@@ -107,16 +157,15 @@ class _AuthScreenState extends State<AuthScreen> {
 
       final user = response.user;
       if (user == null) {
-        _showSnackBar('Verification failed', Colors.red);
+        setState(() => _errorMessage = 'Verification failed');
+        _announceFeedback('Error: Verification failed');
         return;
       }
 
-      // Check if profile already exists
       final profile = await _auth.getPatientProfile(user.id);
 
       if (profile != null && profile['full_name'] != null) {
-        // Existing user → go to patient home
-        _showSnackBar('Welcome back, ${profile['full_name']}!', Colors.green);
+        _announceFeedback('Verification successful. Welcome back!');
         if (mounted) {
           context.read<AuthCubit>().setPatientAuthenticated(
             PatientProfile.fromJson(profile),
@@ -124,25 +173,32 @@ class _AuthScreenState extends State<AuthScreen> {
           context.go('/patient');
         }
       } else {
-        // New user → ask for name
         setState(() => _step = 2);
+        _announceFeedback('Verification successful. Now enter your name.');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _nameFocusNode.requestFocus();
+          _announceStep();
+        });
       }
     } on AuthException catch (e) {
-      _showSnackBar(e.message, Colors.red);
+      setState(() => _errorMessage = e.message);
+      _announceFeedback('Error: ');
     } catch (e) {
-      _showSnackBar('Verification failed. Please try again.', Colors.red);
+      setState(() => _errorMessage = 'Verification failed. Please try again.');
+      _announceFeedback('Error: Verification failed. Please try again.');
     } finally {
       setState(() => _loading = false);
     }
   }
 
-  // ─── Step 2: Save name for new user ────────────────────────
-
   Future<void> _saveProfile() async {
     final name = _nameController.text.trim();
 
+    setState(() => _errorMessage = '');
+
     if (name.isEmpty || name.length < 2) {
-      _showSnackBar('Please enter your full name', Colors.red);
+      setState(() => _errorMessage = 'Please enter your full name');
+      _announceFeedback('Error: Please enter your full name');
       return;
     }
 
@@ -155,100 +211,120 @@ class _AuthScreenState extends State<AuthScreen> {
         phone: _phoneController.text.trim(),
       );
 
-      _showSnackBar('Welcome, $name!', Colors.green);
+      _announceFeedback('Welcome, $name! Your profile has been created.');
       if (mounted) {
         final freshProfile = await _auth.getPatientProfile(user.id);
-        if (freshProfile != null) {
+        if (freshProfile != null && mounted) {
           context.read<AuthCubit>().setPatientAuthenticated(
             PatientProfile.fromJson(freshProfile),
           );
         }
-        context.go('/patient');
+        if (mounted) context.go('/patient');
       }
     } catch (e) {
-      _showSnackBar('Failed to save profile. Please try again.', Colors.red);
+      setState(
+        () => _errorMessage = 'Failed to save profile. Please try again.',
+      );
+      _announceFeedback('Error: Failed to save profile. Please try again.');
     } finally {
       setState(() => _loading = false);
     }
   }
 
-  void _showSnackBar(String message, Color bgColor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: bgColor,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  void _announceFeedback(String message) {
+    if (!mounted) return;
+    final view = View.of(context);
+    SemanticsService.sendAnnouncement(view, message, TextDirection.ltr);
   }
-
-  // ─── Build ─────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        leading: Semantics(
+          button: true,
+          enabled: true,
+          label: 'Go back',
+          onTap: () => _step > 0
+              ? setState(() {
+                  _step--;
+                  _errorMessage = '';
+                  _announceStep();
+                })
+              : context.pop(),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            iconSize: 28,
+            onPressed: () => _step > 0
+                ? setState(() {
+                    _step--;
+                    _errorMessage = '';
+                    _announceStep();
+                  })
+                : context.pop(),
+          ),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // ── Logo ──
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.green.shade400, Colors.green.shade600],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 6),
+                // Header Logo
+                Semantics(
+                  image: true,
+                  label: 'MediHub logo',
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [colorScheme.primary, colorScheme.secondary],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.local_hospital,
-                    size: 48,
-                    color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withAlpha(50),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.local_hospital,
+                      size: 40,
+                      color: colorScheme.onPrimary,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text(
-                  'MediHub',
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
-                    letterSpacing: -0.5,
-                  ),
+
+                Semantics(
+                  header: true,
+                  child: Text('Patient Sign In', style: textTheme.displaySmall),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Book Your Appointment',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                const SizedBox(height: 16),
+
+                // Step Indicator
+                _buildAccessibleStepIndicator(colorScheme),
                 const SizedBox(height: 40),
 
-                // ── Step indicator ──
-                _buildStepIndicator(),
-                const SizedBox(height: 32),
+                // Error Message
+                if (_errorMessage.isNotEmpty)
+                  _buildErrorWidget(_errorMessage, colorScheme),
+                if (_errorMessage.isNotEmpty) const SizedBox(height: 24),
 
-                // ── Form per step ──
-                if (_step == 0) _buildPhoneStep(),
-                if (_step == 1) _buildOtpStep(),
-                if (_step == 2) _buildNameStep(),
+                // Step Forms
+                if (_step == 0) _buildPhoneStep(colorScheme, textTheme),
+                if (_step == 1) _buildOtpStep(colorScheme, textTheme),
+                if (_step == 2) _buildNameStep(colorScheme, textTheme),
               ],
             ),
           ),
@@ -257,356 +333,375 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  // ─── Step Indicator ────────────────────────────────────────
-
-  Widget _buildStepIndicator() {
-    final labels = ['Phone', 'Verify', 'Profile'];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (i) {
-        final isActive = i <= _step;
-        return Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isActive ? Colors.green : Colors.grey.shade300,
-              ),
-              child: Center(
-                child: Text(
-                  '${i + 1}',
-                  style: TextStyle(
-                    color: isActive ? Colors.white : Colors.grey.shade600,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+  Widget _buildAccessibleStepIndicator(ColorScheme colorScheme) {
+    return Semantics(
+      label: 'Step indicator: Step ${_step + 1} of 3',
+      enabled: true,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (i) {
+          final isActive = i <= _step;
+          return Expanded(
+            child: Row(
+              children: [
+                Semantics(
+                  label: 'Step ${i + 1}, ${isActive ? "completed" : "pending"}',
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isActive
+                          ? colorScheme.primary
+                          : colorScheme.surfaceContainerHighest,
+                      border: Border.all(color: colorScheme.outline, width: 2),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${i + 1}',
+                        style: TextStyle(
+                          color: isActive
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                if (i < 2)
+                  Expanded(
+                    child: Container(
+                      height: 2,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      color: i < _step
+                          ? colorScheme.primary
+                          : colorScheme.outlineVariant,
+                    ),
+                  ),
+              ],
             ),
-            if (i < 2) ...[
-              const SizedBox(width: 4),
-              Text(
-                labels[i],
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isActive ? Colors.green : Colors.grey,
-                ),
-              ),
-              Container(
-                width: 30,
-                height: 2,
-                color: i < _step ? Colors.green : Colors.grey.shade300,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-              ),
-            ] else ...[
-              const SizedBox(width: 4),
-              Text(
-                labels[i],
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isActive ? Colors.green : Colors.grey,
-                ),
-              ),
-            ],
-          ],
-        );
-      }),
+          );
+        }),
+      ),
     );
   }
 
-  // ─── Step 0: Phone ─────────────────────────────────────────
-
-  Widget _buildPhoneStep() {
+  Widget _buildPhoneStep(ColorScheme colorScheme, TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Mobile Number',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
-            fontSize: 14,
+        Semantics(
+          header: true,
+          label: 'Enter your phone number',
+          enabled: true,
+          child: Text(
+            'Enter Your Phone Number',
+            style: textTheme.headlineLarge,
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: _phoneController,
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            hintText: 'e.g., 01712345678',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-            prefixIcon: Icon(Icons.phone, color: Colors.green.shade600),
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.green.shade500, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+        Semantics(
+          label: 'We will send you a verification code',
+          enabled: true,
+          child: Text(
+            'We\'ll send you a verification code',
+            style: textTheme.bodyMedium,
           ),
         ),
-        const SizedBox(height: 24),
-        _buildPrimaryButton(
-          label: 'Send OTP',
-          icon: Icons.sms,
-          onPressed: _loading ? null : _sendOtp,
+        const SizedBox(height: 32),
+        _buildAccessibleTextField(
+          focusNode: _phoneFocusNode,
+          controller: _phoneController,
+          labelText: 'Phone Number',
+          hintText: '01XXXXXXXXX',
+          prefixIcon: Icons.phone,
+          keyboardType: TextInputType.phone,
+          maxLength: 11,
+          helperText: 'Bangladesh phone number (11 digits starting with 01)',
+          colorScheme: colorScheme,
+          textTheme: textTheme,
         ),
-        const SizedBox(height: 16),
-        _buildInfoBox(
-          'We will send a 6-digit verification code to your mobile number via SMS.',
+        const SizedBox(height: 32),
+        _buildAccessibleButton(
+          focusNode: _submitButtonFocus,
+          label: 'Send Verification Code',
+          onPressed: _loading ? null : _sendOtp,
+          isLoading: _loading,
+          colorScheme: colorScheme,
+          textTheme: textTheme,
         ),
       ],
     );
   }
 
-  // ─── Step 1: OTP ───────────────────────────────────────────
-
-  Widget _buildOtpStep() {
+  Widget _buildOtpStep(ColorScheme colorScheme, TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Center(
+        Semantics(
+          header: true,
           child: Text(
-            'Enter the code sent to ${_phoneController.text}',
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          '6-Digit Code',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
-            fontSize: 14,
+            'Enter Verification Code',
+            style: textTheme.headlineLarge,
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
+        Semantics(
+          label: 'A 6-digit code has been sent to $_formattedPhone',
+          child: Text(
+            'A 6-digit code has been sent to $_formattedPhone',
+            style: textTheme.bodyMedium,
+          ),
+        ),
+        const SizedBox(height: 32),
+        _buildAccessibleTextField(
+          focusNode: _otpFocusNode,
           controller: _otpController,
+          labelText: 'Verification Code',
+          hintText: '000000',
+          prefixIcon: Icons.shield,
           keyboardType: TextInputType.number,
           maxLength: 6,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 28,
-            letterSpacing: 12,
-            fontWeight: FontWeight.bold,
-          ),
-          decoration: InputDecoration(
-            hintText: '000000',
-            hintStyle: TextStyle(
-              color: Colors.grey.shade300,
-              fontSize: 28,
-              letterSpacing: 12,
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.green.shade500, width: 2),
-            ),
-            counterText: '',
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-          ),
+          helperText: 'Enter the 6-digit code sent to your phone',
+          colorScheme: colorScheme,
+          textTheme: textTheme,
         ),
-        const SizedBox(height: 24),
-        _buildPrimaryButton(
-          label: 'Verify',
-          icon: Icons.check_circle,
+        const SizedBox(height: 32),
+        _buildAccessibleButton(
+          focusNode: _submitButtonFocus,
+          label: 'Verify Code',
           onPressed: _loading ? null : _verifyOtp,
-        ),
-        const SizedBox(height: 12),
-        Center(
-          child: TextButton(
-            onPressed: _loading
-                ? null
-                : () async {
-                    setState(() => _loading = true);
-                    try {
-                      await _auth.sendOtp(phone: _formattedPhone);
-                      _showSnackBar('OTP resent!', Colors.green);
-                    } catch (e) {
-                      _showSnackBar('Failed to resend OTP', Colors.red);
-                    }
-                    setState(() => _loading = false);
-                  },
-            child: Text(
-              'Resend Code',
-              style: TextStyle(
-                color: Colors.green.shade600,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Center(
-          child: TextButton(
-            onPressed: () {
-              setState(() {
-                _step = 0;
-                _otpController.clear();
-              });
-            },
-            child: Text(
-              'Change Number',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-          ),
+          isLoading: _loading,
+          colorScheme: colorScheme,
+          textTheme: textTheme,
         ),
       ],
     );
   }
 
-  // ─── Step 2: Name ──────────────────────────────────────────
-
-  Widget _buildNameStep() {
+  Widget _buildNameStep(ColorScheme colorScheme, TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Center(
-          child: Column(
-            children: [
-              Icon(Icons.person_add, color: Colors.green, size: 48),
-              const SizedBox(height: 8),
-              Text(
-                'Almost there! Tell us your name.',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'Full Name',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
-            fontSize: 14,
-          ),
+        Semantics(
+          header: true,
+          child: Text('Create Your Profile', style: textTheme.headlineLarge),
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: _nameController,
-          decoration: InputDecoration(
-            hintText: 'Enter your full name',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-            prefixIcon: Icon(Icons.person, color: Colors.green.shade600),
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.green.shade500, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-          ),
+        Semantics(
+          label: 'Help us know who you are',
+          child: Text('Help us know who you are', style: textTheme.bodyMedium),
         ),
-        const SizedBox(height: 24),
-        _buildPrimaryButton(
-          label: 'Continue',
-          icon: Icons.arrow_forward,
+        const SizedBox(height: 32),
+        _buildAccessibleTextField(
+          focusNode: _nameFocusNode,
+          controller: _nameController,
+          labelText: 'Full Name',
+          hintText: 'John Doe',
+          prefixIcon: Icons.person,
+          keyboardType: TextInputType.name,
+          helperText: 'Your full name will appear on your profile',
+          colorScheme: colorScheme,
+          textTheme: textTheme,
+        ),
+        const SizedBox(height: 32),
+        _buildAccessibleButton(
+          focusNode: _submitButtonFocus,
+          label: 'Complete Profile',
           onPressed: _loading ? null : _saveProfile,
+          isLoading: _loading,
+          colorScheme: colorScheme,
+          textTheme: textTheme,
         ),
       ],
     );
   }
 
-  // ─── Shared widgets ────────────────────────────────────────
-
-  Widget _buildPrimaryButton({
-    required String label,
-    required IconData icon,
-    VoidCallback? onPressed,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.green.shade500,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        minimumSize: const Size(double.infinity, 56),
-        elevation: 4,
-      ),
-      child: _loading
-          ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2.5,
-              ),
-            )
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+  Widget _buildErrorWidget(String message, ColorScheme colorScheme) {
+    return Semantics(
+      enabled: true,
+      label: 'Error message: $message',
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colorScheme.error.withAlpha(26),
+          border: Border.all(color: colorScheme.error, width: 2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: colorScheme.error, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.error,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+              ),
             ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildInfoBox(String text) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
+  Widget _buildAccessibleTextField({
+    required FocusNode focusNode,
+    required TextEditingController controller,
+    required String labelText,
+    required String hintText,
+    required IconData prefixIcon,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+    TextInputType keyboardType = TextInputType.text,
+    int? maxLength,
+    String? helperText,
+  }) {
+    return Semantics(
+      enabled: true,
+      textField: true,
+      label: labelText,
+      onTap: () => focusNode.requestFocus(),
+      child: Focus(
+        focusNode: focusNode,
+        onKeyEvent: (node, event) {
+          if (event.logicalKey == LogicalKeyboardKey.enter) {
+            if (_step == 0) _sendOtp();
+            if (_step == 1) _verifyOtp();
+            if (_step == 2) _saveProfile();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Builder(
+          builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  focusNode: focusNode,
+                  controller: controller,
+                  keyboardType: keyboardType,
+                  maxLength: maxLength,
+                  textInputAction: TextInputAction.next,
+                  style: textTheme.bodyLarge,
+                  decoration: InputDecoration(
+                    labelText: labelText,
+                    hintText: hintText,
+                    prefixIcon: Icon(
+                      prefixIcon,
+                      color: isFocused
+                          ? colorScheme.primary
+                          : colorScheme.outline,
+                    ),
+                  ),
+                ),
+                if (helperText != null) ...[
+                  const SizedBox(height: 8),
+                  Semantics(
+                    label: helperText,
+                    enabled: true,
+                    child: Text(helperText, style: textTheme.labelMedium),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.info, color: Colors.blue.shade700, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(color: Colors.blue.shade700, fontSize: 13),
-            ),
+    );
+  }
+
+  Widget _buildAccessibleButton({
+    required FocusNode focusNode,
+    required String label,
+    required VoidCallback? onPressed,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+    bool isLoading = false,
+  }) {
+    final isEnabled = onPressed != null && !isLoading;
+
+    return Semantics(
+      button: true,
+      enabled: isEnabled,
+      onTap: onPressed,
+      label: label,
+      child: Focus(
+        focusNode: focusNode,
+        onKeyEvent: (node, event) {
+          if (isEnabled &&
+              (event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.space)) {
+            onPressed();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: GestureDetector(
+          onTap: isEnabled ? onPressed : null,
+          child: Builder(
+            builder: (context) {
+              final isFocused = Focus.of(context).hasFocus;
+              return Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: isEnabled
+                      ? LinearGradient(
+                          colors: [colorScheme.primary, colorScheme.secondary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: !isEnabled
+                      ? colorScheme.surfaceContainerHighest
+                      : null,
+                  borderRadius: BorderRadius.circular(12),
+                  border: isFocused
+                      ? Border.all(color: colorScheme.primary, width: 3)
+                      : null,
+                  boxShadow: isEnabled
+                      ? [
+                          BoxShadow(
+                            color: colorScheme.primary.withAlpha(77),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: isLoading
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              colorScheme.onPrimary,
+                            ),
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          label,
+                          style: textTheme.labelLarge?.copyWith(
+                            color: isEnabled
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                ),
+              );
+            },
           ),
-        ],
+        ),
       ),
     );
   }

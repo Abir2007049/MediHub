@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import '../blocs/auth/auth_cubit.dart';
 import '../services/supabase_auth_service.dart';
 
@@ -13,198 +15,289 @@ class WelcomeScreen extends StatefulWidget {
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
   final _auth = SupabaseAuthService.instance;
+  late FocusNode _doctorButtonFocus;
+  late FocusNode _patientButtonFocus;
 
   @override
   void initState() {
     super.initState();
+    _doctorButtonFocus = FocusNode();
+    _patientButtonFocus = FocusNode();
     _checkExistingSession();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SemanticsService.announce(
+        'Welcome to MediHub. Choose to continue as a doctor or patient.',
+        TextDirection.ltr,
+      );
+    });
   }
 
-  /// If a Supabase session exists, look up the user's role and navigate.
+  @override
+  void dispose() {
+    _doctorButtonFocus.dispose();
+    _patientButtonFocus.dispose();
+    super.dispose();
+  }
+
   Future<void> _checkExistingSession() async {
     final user = _auth.currentUser;
     if (user == null) return;
 
     try {
       final role = await _auth.getUserRole(user.id);
-
       if (!mounted) return;
 
-      if (mounted) {
-        await context.read<AuthCubit>().checkSession();
-        if (!mounted) return;
-        if (role == 'doctor') {
-          context.go('/doctor');
-        } else if (role == 'patient') {
-          context.go('/patient');
-        }
+      await context.read<AuthCubit>().checkSession();
+      if (!mounted) return;
+
+      if (role == 'doctor') {
+        context.go('/doctor');
+      } else if (role == 'patient') {
+        context.go('/patient');
       }
     } catch (_) {
-      // Session invalid or network error – stay on welcome screen
+      // Stay on welcome screen
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
+        child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Logo with gradient
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.green.shade400, Colors.green.shade600],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
+                const SizedBox(height: 24),
+                // Logo Container
+                Semantics(
+                  image: true,
+                  label: 'MediHub logo',
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          colorScheme.primary,
+                          colorScheme.secondary,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.local_hospital,
-                    size: 56,
-                    color: Colors.white,
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withOpacity(0.25),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.local_hospital,
+                      size: 64,
+                      color: colorScheme.onPrimary,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 54),
 
                 // Title
-                Text(
-                  'MediHub',
-                  style: TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
-                    letterSpacing: -1,
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'MediHub',
+                    style: textTheme.displayLarge,
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(height: 12),
 
                 // Subtitle
-                Text(
-                  'Connect with Healthcare Professionals',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.2,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 48),
-
-                // Doctor Button
-                Container(
-                  width: double.infinity,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.green.shade400, Colors.green.shade600],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                Semantics(
+                  label: 'Connect with healthcare professionals',
+                  enabled: true,
+                  child: Text(
+                    'Connect with Healthcare Professionals',
+                    style: textTheme.headlineMedium?.copyWith(
+                      color: colorScheme.onSurface.withOpacity(0.7),
+                      fontWeight: FontWeight.w500,
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        context.push('/doctor-auth');
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.medical_services,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Continue as Doctor',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // Patient Button
-                Container(
-                  width: double.infinity,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.green.shade400, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                // Tagline
+                Semantics(
+                  label: 'Get quality healthcare at your convenience',
+                  child: Text(
+                    'Get quality healthcare at your convenience',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        context.push('/auth');
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.people,
-                            color: Colors.green.shade600,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Continue as Patient',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green.shade600,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
+                ),
+                const SizedBox(height: 72),
+
+                // Doctor Button
+                Semantics(
+                  button: true,
+                  enabled: true,
+                  onTap: () => context.push('/doctor-auth'),
+                  label: 'Continue as Doctor',
+                  tooltip: 'Sign in or register as a healthcare professional',
+                  child: Focus(
+                    focusNode: _doctorButtonFocus,
+                    onKey: (node, event) {
+                      if (event.logicalKey == LogicalKeyboardKey.enter ||
+                          event.logicalKey == LogicalKeyboardKey.space) {
+                        context.push('/doctor-auth');
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: GestureDetector(
+                      onTap: () => context.push('/doctor-auth'),
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: Builder(
+                          builder: (context) {
+                            final isFocused = Focus.of(context).hasFocus;
+                            return Container(
+                              width: double.infinity,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    colorScheme.primary,
+                                    colorScheme.secondary,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: isFocused
+                                    ? Border.all(
+                                        color: colorScheme.primary,
+                                        width: 3,
+                                      )
+                                    : null,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colorScheme.primary.withOpacity(0.3),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.badge,
+                                    color: colorScheme.onPrimary,
+                                    size: 28,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Text(
+                                    'Continue as Doctor',
+                                    style: textTheme.labelLarge?.copyWith(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                // Patient Button
+                Semantics(
+                  button: true,
+                  enabled: true,
+                  onTap: () => context.push('/auth'),
+                  label: 'Continue as Patient',
+                  tooltip: 'Book appointments with doctors',
+                  child: Focus(
+                    focusNode: _patientButtonFocus,
+                    onKey: (node, event) {
+                      if (event.logicalKey == LogicalKeyboardKey.enter ||
+                          event.logicalKey == LogicalKeyboardKey.space) {
+                        context.push('/auth');
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: GestureDetector(
+                      onTap: () => context.push('/auth'),
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: Builder(
+                          builder: (context) {
+                            final isFocused = Focus.of(context).hasFocus;
+                            return Container(
+                              width: double.infinity,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: colorScheme.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isFocused
+                                      ? colorScheme.primary
+                                      : colorScheme.primary.withOpacity(0.5),
+                                  width: isFocused ? 3 : 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colorScheme.primary.withOpacity(0.1),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.person,
+                                    color: colorScheme.primary,
+                                    size: 28,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Text(
+                                    'Continue as Patient',
+                                    style: textTheme.labelLarge?.copyWith(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: colorScheme.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 48),
               ],
             ),
           ),

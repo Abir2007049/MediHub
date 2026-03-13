@@ -70,12 +70,39 @@ class SupabaseAuthService {
   Future<AuthResponse> signUpDoctor({
     required String email,
     required String password,
+    required String name,
+    required String phone,
+    required String nid,
+    required String licenseNumber,
+    required String specialization,
+    required String hospital,
+    required String department,
+    required String degree,
+    required String medicalCollege,
   }) async {
-    return await _client.auth.signUp(
+    final response = await _client.auth.signUp(
       email: email,
       password: password,
       data: {'role': 'doctor'},
     );
+
+    if (response.user != null) {
+      await createDoctorProfile(
+        userId: response.user!.id,
+        fullName: name,
+        email: email,
+        phone: phone,
+        nid: nid,
+        license: licenseNumber,
+        specialization: specialization,
+        hospital: hospital,
+        department: department,
+        degree: degree,
+        medicalCollege: medicalCollege,
+      );
+    }
+
+    return response;
   }
 
   /// Sign in a doctor with email + password.
