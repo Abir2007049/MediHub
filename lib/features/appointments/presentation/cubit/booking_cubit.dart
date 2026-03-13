@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/features/appointments/data/repositories/appointment_repository.dart';
 import 'package:medihub/features/doctor/data/repositories/doctor_repository.dart';
 import 'booking_state.dart';
@@ -10,8 +11,8 @@ class BookingCubit extends Cubit<BookingState> {
   BookingCubit({
     AppointmentRepository? appointmentRepo,
     DoctorRepository? doctorRepo,
-  }) : _appointmentRepo = appointmentRepo ?? AppointmentRepository(),
-       _doctorRepo = doctorRepo ?? DoctorRepository(),
+  }) : _appointmentRepo = appointmentRepo ?? sl<AppointmentRepository>(),
+       _doctorRepo = doctorRepo ?? sl<DoctorRepository>(),
        super(BookingInitial());
 
   Future<void> loadSchedule(String doctorId) async {
@@ -80,5 +81,3 @@ class BookingCubit extends Cubit<BookingState> {
     }
   }
 }
-
-

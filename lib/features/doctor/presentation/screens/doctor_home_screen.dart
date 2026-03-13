@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/features/doctor/presentation/cubit/doctor_profile_cubit.dart';
 import 'package:medihub/features/doctor/presentation/cubit/doctor_profile_state.dart';
 import 'package:medihub/models/doctor_profile.dart';
@@ -30,7 +31,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   Future<void> _handleLogout() async {
     try {
-      await SupabaseAuthService.instance.signOut();
+      await sl<SupabaseAuthService>().signOut();
     } catch (_) {}
     if (mounted) context.go('/doctor-auth');
   }
@@ -504,5 +505,3 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     );
   }
 }
-
-

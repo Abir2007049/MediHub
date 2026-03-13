@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/models/doctor_profile.dart';
 import 'package:medihub/models/patient_profile.dart';
 import 'package:medihub/features/doctor/data/repositories/doctor_repository.dart';
@@ -10,8 +11,8 @@ class AuthCubit extends Cubit<AuthState> {
   final DoctorRepository _doctorRepo;
 
   AuthCubit({SupabaseAuthService? auth, DoctorRepository? doctorRepo})
-    : _auth = auth ?? SupabaseAuthService.instance,
-      _doctorRepo = doctorRepo ?? DoctorRepository(),
+    : _auth = auth ?? sl<SupabaseAuthService>(),
+      _doctorRepo = doctorRepo ?? sl<DoctorRepository>(),
       super(AuthInitial());
 
   String? get currentUserId => _auth.currentUser?.id;
@@ -65,5 +66,3 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthUnauthenticated());
   }
 }
-
-

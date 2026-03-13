@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/features/auth/data/services/bmdc_license_verification_service.dart';
 import 'package:medihub/features/auth/data/services/supabase_auth_service.dart';
 import 'package:medihub/features/auth/presentation/cubit/auth_cubit.dart';
@@ -21,7 +22,7 @@ class DoctorAuthScreen extends StatefulWidget {
 }
 
 class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
-  final _auth = SupabaseAuthService.instance;
+  final _auth = sl<SupabaseAuthService>();
 
   bool _isLogin = true;
   int _registrationStep = 1; // 1-3 for registration

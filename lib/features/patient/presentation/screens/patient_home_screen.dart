@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:medihub/features/auth/presentation/cubit/auth_state.dart';
 import 'package:medihub/features/doctor/presentation/cubit/doctor_list_cubit.dart';
@@ -64,7 +65,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   }
 
   Future<void> _clearPatientSession() async {
-    await SupabaseAuthService.instance.signOut();
+    await sl<SupabaseAuthService>().signOut();
   }
 
   @override
@@ -971,4 +972,3 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 }
-

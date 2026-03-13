@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/features/auth/data/services/supabase_auth_service.dart';
 import 'package:medihub/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,7 +21,7 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  final _auth = SupabaseAuthService.instance;
+  final _auth = sl<SupabaseAuthService>();
 
   /// Steps: 0 = phone input, 1 = OTP verification, 2 = name (new user)
   int _step = 0;

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
+import 'core/di/service_locator.dart';
+import 'core/widgets/app_bloc_provider.dart';
 import 'models/env.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
 import 'features/doctor/presentation/cubit/doctor_list_cubit.dart';
@@ -15,6 +17,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(url: Env.supabaseUrl, anonKey: Env.supabaseKey);
+  await setupServiceLocator();
 
   runApp(const MediHubApp());
 }
@@ -26,12 +29,12 @@ class MediHubApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => AuthCubit()),
-        BlocProvider(create: (_) => DoctorListCubit()),
-        BlocProvider(create: (_) => DoctorProfileCubit()),
-        BlocProvider(create: (_) => AppointmentsCubit()),
-        BlocProvider(create: (_) => BookingCubit()),
-        BlocProvider(create: (_) => PrescriptionCubit()),
+        appBlocProvider<AuthCubit>(),
+        appBlocProvider<DoctorListCubit>(),
+        appBlocProvider<DoctorProfileCubit>(),
+        appBlocProvider<AppointmentsCubit>(),
+        appBlocProvider<BookingCubit>(),
+        appBlocProvider<PrescriptionCubit>(),
       ],
       child: MaterialApp.router(
         title: 'MediHub',

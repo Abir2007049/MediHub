@@ -1,17 +1,20 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/features/doctor/data/repositories/doctor_repository.dart';
 import 'package:medihub/features/auth/data/services/supabase_auth_service.dart';
 import 'doctor_profile_state.dart';
 
 class DoctorProfileCubit extends Cubit<DoctorProfileState> {
   final DoctorRepository _repo;
+  final SupabaseAuthService _auth;
 
-  DoctorProfileCubit({DoctorRepository? repo})
-    : _repo = repo ?? DoctorRepository(),
+  DoctorProfileCubit({DoctorRepository? repo, SupabaseAuthService? auth})
+    : _repo = repo ?? sl<DoctorRepository>(),
+      _auth = auth ?? sl<SupabaseAuthService>(),
       super(DoctorProfileInitial());
 
   Future<void> loadProfile([String? userId]) async {
-    final id = userId ?? SupabaseAuthService.instance.currentUser?.id;
+    final id = userId ?? _auth.currentUser?.id;
     if (id == null) {
       emit(DoctorProfileError('Not logged in'));
       return;
@@ -31,7 +34,7 @@ class DoctorProfileCubit extends Cubit<DoctorProfileState> {
 
   Future<void> updateProfile(Map<String, dynamic> data) async {
     final currentState = state;
-    final userId = SupabaseAuthService.instance.currentUser?.id;
+    final userId = _auth.currentUser?.id;
     if (userId == null) {
       emit(DoctorProfileError('Not logged in'));
       return;
@@ -51,5 +54,3 @@ class DoctorProfileCubit extends Cubit<DoctorProfileState> {
     }
   }
 }
-
-

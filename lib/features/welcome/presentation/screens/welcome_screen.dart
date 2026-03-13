@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:medihub/features/auth/data/services/supabase_auth_service.dart';
 
@@ -14,7 +15,7 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  final _auth = SupabaseAuthService.instance;
+  final _auth = sl<SupabaseAuthService>();
   late FocusNode _doctorButtonFocus;
   late FocusNode _patientButtonFocus;
 
@@ -303,4 +304,3 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 }
-

@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/models/doctor_profile.dart';
 import 'package:medihub/features/doctor/data/repositories/doctor_repository.dart';
 import 'doctor_list_state.dart';
@@ -7,7 +8,7 @@ class DoctorListCubit extends Cubit<DoctorListState> {
   final DoctorRepository _repo;
 
   DoctorListCubit({DoctorRepository? repo})
-    : _repo = repo ?? DoctorRepository(),
+    : _repo = repo ?? sl<DoctorRepository>(),
       super(DoctorListInitial());
 
   Future<void> loadDoctors() async {
@@ -32,5 +33,3 @@ class DoctorListCubit extends Cubit<DoctorListState> {
     }
   }
 }
-
-

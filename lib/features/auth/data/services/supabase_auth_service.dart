@@ -2,8 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Centralized Supabase auth + profile helper for MediHub.
 class SupabaseAuthService {
-  SupabaseAuthService._();
-  static final instance = SupabaseAuthService._();
+  SupabaseAuthService();
 
   final _client = Supabase.instance.client;
 

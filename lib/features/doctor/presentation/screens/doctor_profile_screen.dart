@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/models/doctor_profile.dart';
 import 'package:medihub/models/doctor_schedule.dart';
 import 'package:medihub/models/review.dart';
@@ -17,7 +18,7 @@ class DoctorProfileScreen extends StatefulWidget {
 class _DoctorProfileScreenState extends State<DoctorProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final DoctorRepository _doctorRepo = DoctorRepository();
+  final DoctorRepository _doctorRepo = sl<DoctorRepository>();
 
   List<Review> _reviews = [];
   List<DoctorSchedule> _schedules = [];
@@ -645,5 +646,3 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant _TabBarDelegate oldDelegate) => false;
 }
-
-

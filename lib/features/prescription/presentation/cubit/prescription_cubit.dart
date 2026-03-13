@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/models/prescription.dart';
 import 'package:medihub/models/medicine.dart';
 import 'package:medihub/features/prescription/data/repositories/prescription_repository.dart';
@@ -8,7 +9,7 @@ class PrescriptionCubit extends Cubit<PrescriptionState> {
   final PrescriptionRepository _repo;
 
   PrescriptionCubit({PrescriptionRepository? repo})
-    : _repo = repo ?? PrescriptionRepository(),
+    : _repo = repo ?? sl<PrescriptionRepository>(),
       super(PrescriptionInitial());
 
   Future<void> loadByAppointmentId(String appointmentId) async {
@@ -94,5 +95,3 @@ class PrescriptionCubit extends Cubit<PrescriptionState> {
     }
   }
 }
-
-
