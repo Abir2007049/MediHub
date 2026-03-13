@@ -48,3 +48,6 @@ app.*.map.json
 
 .env
 .env.local
+
+*.g.dart
+*.freezed.dart
