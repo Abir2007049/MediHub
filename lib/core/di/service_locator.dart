@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:medihub/core/services/local_notification_service.dart';
 import 'package:medihub/features/appointments/data/repositories/appointment_repository.dart';
 import 'package:medihub/features/appointments/presentation/cubit/appointments_cubit.dart';
 import 'package:medihub/features/appointments/presentation/cubit/booking_cubit.dart';
@@ -13,6 +14,12 @@ import 'package:medihub/features/prescription/presentation/cubit/prescription_cu
 final sl = GetIt.instance;
 
 Future<void> setupServiceLocator() async {
+  if (!sl.isRegistered<LocalNotificationService>()) {
+    sl.registerLazySingleton<LocalNotificationService>(
+      () => LocalNotificationService(),
+    );
+  }
+
   if (!sl.isRegistered<SupabaseAuthService>()) {
     sl.registerLazySingleton<SupabaseAuthService>(() => SupabaseAuthService());
   }
@@ -71,6 +78,7 @@ Future<void> setupServiceLocator() async {
       () => BookingCubit(
         appointmentRepo: sl<AppointmentRepository>(),
         doctorRepo: sl<DoctorRepository>(),
+        notifications: sl<LocalNotificationService>(),
       ),
     );
   }

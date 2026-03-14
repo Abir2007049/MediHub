@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:medihub/core/di/service_locator.dart';
+import 'package:medihub/core/services/local_notification_service.dart';
 import 'package:medihub/features/appointments/data/repositories/appointment_repository.dart';
 import 'package:medihub/features/doctor/data/repositories/doctor_repository.dart';
 import 'booking_state.dart';
@@ -7,12 +8,15 @@ import 'booking_state.dart';
 class BookingCubit extends Cubit<BookingState> {
   final AppointmentRepository _appointmentRepo;
   final DoctorRepository _doctorRepo;
+  final LocalNotificationService _notifications;
 
   BookingCubit({
     AppointmentRepository? appointmentRepo,
     DoctorRepository? doctorRepo,
+    LocalNotificationService? notifications,
   }) : _appointmentRepo = appointmentRepo ?? sl<AppointmentRepository>(),
        _doctorRepo = doctorRepo ?? sl<DoctorRepository>(),
+       _notifications = notifications ?? sl<LocalNotificationService>(),
        super(BookingInitial());
 
   Future<void> loadSchedule(String doctorId) async {
@@ -58,6 +62,11 @@ class BookingCubit extends Cubit<BookingState> {
   }) async {
     emit(BookingConfirming());
     try {
+      final estimatedSlotTime = _notifications.estimateAppointmentDateTime(
+        selectedDay: selectedDay,
+        approximateTime: approximateTime,
+      );
+
       final appointment = await _appointmentRepo.createAppointment(
         patientId: patientId,
         doctorId: doctorId,
@@ -71,10 +80,15 @@ class BookingCubit extends Cubit<BookingState> {
         approximateTime: approximateTime,
         consultationFee: consultationFee,
         paymentMethod: paymentMethod,
-        slotTime: DateTime.now(),
+        slotTime: estimatedSlotTime,
         isFollowUp: isFollowUp,
         parentAppointmentId: parentAppointmentId,
       );
+
+      try {
+        await _notifications.notifyAppointmentBooked(appointment);
+      } catch (_) {}
+
       emit(BookingConfirmed(appointment));
     } catch (e) {
       emit(BookingError(e.toString()));

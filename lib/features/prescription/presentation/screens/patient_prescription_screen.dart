@@ -41,6 +41,7 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
 
     await context.read<PrescriptionCubit>().markFollowUpBooked(
       _prescription.id!,
+      fallbackPrescription: _prescription,
     );
 
     setState(() {

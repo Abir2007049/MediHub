@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:medihub/core/di/service_locator.dart';
+import 'package:medihub/core/services/local_notification_service.dart';
 import 'package:medihub/models/prescription.dart';
 import 'package:medihub/models/medicine.dart';
 import 'package:medihub/features/prescription/data/repositories/prescription_repository.dart';
@@ -7,9 +8,11 @@ import 'prescription_state.dart';
 
 class PrescriptionCubit extends Cubit<PrescriptionState> {
   final PrescriptionRepository _repo;
+  final LocalNotificationService _notifications;
 
   PrescriptionCubit({PrescriptionRepository? repo})
     : _repo = repo ?? sl<PrescriptionRepository>(),
+      _notifications = sl<LocalNotificationService>(),
       super(PrescriptionInitial());
 
   Future<void> loadByAppointmentId(String appointmentId) async {
@@ -79,16 +82,27 @@ class PrescriptionCubit extends Cubit<PrescriptionState> {
     }
   }
 
-  Future<void> markFollowUpBooked(String prescriptionId) async {
+  Future<void> markFollowUpBooked(
+    String prescriptionId, {
+    Prescription? fallbackPrescription,
+  }) async {
     try {
       await _repo.markFollowUpBooked(prescriptionId);
+
       final current = state;
+      Prescription? updated;
+
       if (current is PrescriptionLoaded) {
-        emit(
-          PrescriptionLoaded(
-            current.prescription.copyWith(followUpBooked: true),
-          ),
-        );
+        updated = current.prescription.copyWith(followUpBooked: true);
+        emit(PrescriptionLoaded(updated));
+      } else if (fallbackPrescription != null) {
+        updated = fallbackPrescription.copyWith(followUpBooked: true);
+      }
+
+      if (updated != null) {
+        try {
+          await _notifications.notifyFollowUpBooked(updated);
+        } catch (_) {}
       }
     } catch (e) {
       emit(PrescriptionError(e.toString()));
