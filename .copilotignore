@@ -1,0 +1,8 @@
+# .gitignore (also helps Copilot respect boundaries)
+.env
+.env.local
+.env.production
+*.pem
+secrets/
+
+lib/models/env.g.dart
