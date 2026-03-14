@@ -26,6 +26,10 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
+  ColorScheme get _colors => Theme.of(context).colorScheme;
+  Color get _primary => _colors.primary;
+  Color get _primaryContainer => _colors.primaryContainer;
+
   String _paymentMethod = 'bkash';
   final _accountController = TextEditingController();
   bool _confirmed = false;
@@ -93,11 +97,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text('Payment'),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.green.shade700,
+          backgroundColor: _colors.surface,
+          foregroundColor: _primary,
           elevation: 0,
         ),
         body: _confirmed ? _buildSuccess() : _buildPaymentForm(d),
@@ -116,21 +120,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.green.shade50,
+                color: _primaryContainer,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withOpacity(0.2),
+                    color: _primary.withOpacity(0.2),
                     blurRadius: 20,
                     offset: const Offset(0, 6),
                   ),
                 ],
               ),
-              child: Icon(
-                Icons.check_circle,
-                size: 80,
-                color: Colors.green.shade600,
-              ),
+              child: Icon(Icons.check_circle, size: 80, color: _primary),
             ),
             const SizedBox(height: 24),
             const Text(
@@ -155,7 +155,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               child: ElevatedButton(
                 onPressed: () => context.go('/patient'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade600,
+                  backgroundColor: _primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -231,7 +231,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
+                          color: _primary,
                         ),
                       ),
                     ],
@@ -279,7 +279,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               'cash',
               'Cash on Visit',
               Icons.payments_outlined,
-              Colors.green,
+              _primary,
             ),
             const SizedBox(height: 16),
 
@@ -314,7 +314,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   child: ElevatedButton(
                     onPressed: isLoading ? null : _handleConfirm,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
+                      backgroundColor: _primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -388,12 +388,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.green.shade50 : Colors.white,
+              color: isSelected ? _primaryContainer : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected
-                    ? Colors.green.shade600
-                    : Colors.grey.shade200,
+                color: isSelected ? _primary : Colors.grey.shade200,
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -413,18 +411,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected
-                        ? Colors.green.shade700
-                        : Colors.grey.shade700,
+                    color: isSelected ? _primary : Colors.grey.shade700,
                   ),
                 ),
                 const Spacer(),
                 if (isSelected)
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.green.shade600,
-                    size: 24,
-                  )
+                  Icon(Icons.check_circle, color: _primary, size: 24)
                 else
                   Icon(
                     Icons.radio_button_unchecked,
@@ -439,5 +431,3 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 }
-
-

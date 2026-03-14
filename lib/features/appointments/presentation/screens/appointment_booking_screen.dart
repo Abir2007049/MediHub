@@ -17,6 +17,10 @@ class AppointmentBookingScreen extends StatefulWidget {
 }
 
 class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
+  ColorScheme get _colors => Theme.of(context).colorScheme;
+  Color get _primary => _colors.primary;
+  Color get _primaryContainer => _colors.primaryContainer;
+
   String? _selectedDay;
   int? _selectedSerial;
 
@@ -93,11 +97,11 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
   Widget build(BuildContext context) {
     final d = widget.doctor;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Book Appointment'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.green.shade700,
+        backgroundColor: _colors.surface,
+        foregroundColor: _primary,
         elevation: 0,
       ),
       body: BlocConsumer<BookingCubit, BookingState>(
@@ -113,9 +117,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
         },
         builder: (context, state) {
           if (state is BookingLoadingSchedule || state is BookingInitial) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.green),
-            );
+            return Center(child: CircularProgressIndicator(color: _primary));
           }
           if (state is BookingError) {
             return Center(
@@ -206,17 +208,13 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor: Colors.green.shade100,
+                    backgroundColor: _primaryContainer,
                     backgroundImage:
                         d.profileImage != null && d.profileImage!.isNotEmpty
                         ? NetworkImage(d.profileImage!)
                         : null,
                     child: d.profileImage == null || d.profileImage!.isEmpty
-                        ? Icon(
-                            Icons.person,
-                            size: 30,
-                            color: Colors.green.shade700,
-                          )
+                        ? Icon(Icons.person, size: 30, color: _primary)
                         : null,
                   ),
                   const SizedBox(width: 16),
@@ -243,7 +241,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: Colors.green.shade700,
+                            color: _primary,
                           ),
                         ),
                       ],
@@ -278,16 +276,14 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                       _selectedSerial = null;
                     });
                   },
-                  selectedColor: Colors.green.shade600,
+                  selectedColor: _primary,
                   labelStyle: TextStyle(
                     color: isSelected ? Colors.white : Colors.grey.shade700,
                     fontWeight: FontWeight.w600,
                   ),
                   backgroundColor: Colors.white,
                   side: BorderSide(
-                    color: isSelected
-                        ? Colors.green.shade600
-                        : Colors.grey.shade300,
+                    color: isSelected ? _primary : Colors.grey.shade300,
                   ),
                 );
               }).toList(),
@@ -299,20 +295,20 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: _primaryContainer,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade200),
+                  border: Border.all(color: _colors.outlineVariant),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.access_time, color: Colors.green.shade700),
+                    Icon(Icons.access_time, color: _primary),
                     const SizedBox(width: 8),
                     Text(
                       '${currentSchedule.timeRange}  •  ${currentSchedule.totalSeats} seats',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Colors.green.shade700,
+                        color: _primary,
                       ),
                     ),
                   ],
@@ -355,21 +351,21 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                         color: isBooked
                             ? Colors.red.shade100
                             : isSelected
-                            ? Colors.green.shade600
+                            ? _primary
                             : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isBooked
                               ? Colors.red.shade300
                               : isSelected
-                              ? Colors.green.shade700
+                              ? _primary
                               : Colors.grey.shade300,
                           width: isSelected ? 2 : 1,
                         ),
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: Colors.green.withOpacity(0.3),
+                                  color: _primary.withOpacity(0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -411,7 +407,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                 children: [
                   _legendDot(Colors.white, 'Available'),
                   const SizedBox(width: 16),
-                  _legendDot(Colors.green.shade600, 'Selected'),
+                  _legendDot(_primary, 'Selected'),
                   const SizedBox(width: 16),
                   _legendDot(Colors.red.shade100, 'Booked'),
                 ],
@@ -463,7 +459,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade600,
+                    backgroundColor: _primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -507,5 +503,3 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
     );
   }
 }
-
-

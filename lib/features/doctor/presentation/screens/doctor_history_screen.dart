@@ -18,6 +18,10 @@ class DoctorHistoryScreen extends StatefulWidget {
 
 class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
     with SingleTickerProviderStateMixin {
+  ColorScheme get _colors => Theme.of(context).colorScheme;
+  Color get _primary => _colors.primary;
+  Color get _primaryContainer => _colors.primaryContainer;
+
   late TabController _tabController;
 
   @override
@@ -49,17 +53,17 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Patient Appointments'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.green.shade700,
+        backgroundColor: _colors.surface,
+        foregroundColor: _primary,
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.green.shade700,
+          labelColor: _primary,
           unselectedLabelColor: Colors.grey,
-          indicatorColor: Colors.green.shade700,
+          indicatorColor: _primary,
           tabs: const [
             Tab(text: 'Upcoming'),
             Tab(text: 'Past'),
@@ -69,9 +73,7 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
       body: BlocBuilder<AppointmentsCubit, AppointmentsState>(
         builder: (context, state) {
           if (state is AppointmentsLoading || state is AppointmentsInitial) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.green),
-            );
+            return Center(child: CircularProgressIndicator(color: _primary));
           }
           if (state is AppointmentsError) {
             return Center(
@@ -200,8 +202,8 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                   children: [
                     CircleAvatar(
                       radius: 22,
-                      backgroundColor: Colors.blue.shade100,
-                      child: Icon(Icons.person, color: Colors.blue.shade700),
+                      backgroundColor: _primaryContainer,
+                      child: Icon(Icons.person, color: _primary),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -254,24 +256,20 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.green.shade50,
+                          color: _primaryContainer,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.check_circle,
-                              size: 14,
-                              color: Colors.green.shade700,
-                            ),
+                            Icon(Icons.check_circle, size: 14, color: _primary),
                             const SizedBox(width: 4),
                             Text(
                               'Prescribed',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.green.shade700,
+                                color: _primary,
                               ),
                             ),
                           ],
@@ -342,8 +340,8 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
     Color fg;
     switch (status) {
       case 'confirmed':
-        bg = Colors.green.shade50;
-        fg = Colors.green.shade700;
+        bg = _primaryContainer;
+        fg = _primary;
         break;
       case 'completed':
         bg = Colors.blue.shade50;
@@ -381,5 +379,3 @@ class _DoctorHistoryScreenState extends State<DoctorHistoryScreen>
     );
   }
 }
-
-

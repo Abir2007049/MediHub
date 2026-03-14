@@ -17,6 +17,11 @@ class PatientHomeScreen extends StatefulWidget {
 }
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
+  ColorScheme get _colors => Theme.of(context).colorScheme;
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _secondary => Theme.of(context).colorScheme.secondary;
+  Color get _primaryContainer => Theme.of(context).colorScheme.primaryContainer;
+
   String _searchQuery = '';
   String _selectedLocation = 'All';
   String _selectedSpecialization = 'All';
@@ -71,7 +76,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,7 +96,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           ],
         ),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.green.shade700,
+        foregroundColor: _primary,
         elevation: 0,
         actions: [
           IconButton(
@@ -149,9 +154,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       body: BlocBuilder<DoctorListCubit, DoctorListState>(
         builder: (context, state) {
           if (state is DoctorListLoading || state is DoctorListInitial) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.green),
-            );
+            return Center(child: CircularProgressIndicator(color: _primary));
           }
           if (state is DoctorListError) {
             return Center(
@@ -204,7 +207,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.green.shade50, Colors.white],
+                  colors: [_primaryContainer, Colors.white],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -220,15 +223,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [
-                              Colors.green.shade400,
-                              Colors.green.shade600,
-                            ],
+                            colors: [_primary, _secondary],
                           ),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.green.withOpacity(0.3),
+                              color: _primary.withOpacity(0.3),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -275,7 +275,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.green.withOpacity(0.1),
+                          color: _primary.withOpacity(0.1),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -289,10 +289,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           color: Colors.grey.shade400,
                           fontSize: 15,
                         ),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: Colors.green.shade600,
-                        ),
+                        prefixIcon: Icon(Icons.search, color: _primary),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
                                 icon: Icon(
@@ -326,7 +323,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           '$doctorCount',
                           'Doctors',
                           Icons.people_outline,
-                          Colors.green,
+                          _primary,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -335,7 +332,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           '$specCount',
                           'Specialists',
                           Icons.local_hospital_outlined,
-                          Colors.blue,
+                          _secondary,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -392,25 +389,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       width: 100,
                       decoration: BoxDecoration(
                         gradient: isSelected
-                            ? LinearGradient(
-                                colors: [
-                                  Colors.green.shade400,
-                                  Colors.green.shade600,
-                                ],
-                              )
+                            ? LinearGradient(colors: [_primary, _secondary])
                             : null,
                         color: isSelected ? null : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected
-                              ? Colors.green.shade600
-                              : Colors.grey.shade200,
+                          color: isSelected ? _primary : Colors.grey.shade200,
                           width: isSelected ? 2 : 1,
                         ),
                         boxShadow: [
                           BoxShadow(
                             color: isSelected
-                                ? Colors.green.withOpacity(0.4)
+                                ? _primary.withOpacity(0.4)
                                 : Colors.black.withOpacity(0.05),
                             blurRadius: isSelected ? 12 : 6,
                             offset: Offset(0, isSelected ? 4 : 2),
@@ -425,15 +415,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? Colors.white.withOpacity(0.25)
-                                  : Colors.green.withOpacity(0.1),
+                                  : _primary.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               icon,
                               size: 28,
-                              color: isSelected
-                                  ? Colors.white
-                                  : Colors.green.shade700,
+                              color: isSelected ? Colors.white : _primary,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -473,7 +461,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   hintText: 'Select Location',
                   prefixIcon: Icon(
                     Icons.location_on_outlined,
-                    color: Colors.green.shade600,
+                    color: _primary,
                     size: 20,
                   ),
                   filled: true,
@@ -488,10 +476,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Colors.green.shade400,
-                      width: 2,
-                    ),
+                    borderSide: BorderSide(color: _primary, width: 2),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -587,9 +572,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   child: ElevatedButton(
                     onPressed: () => setState(() => _displayedDoctorCount += 4),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade50,
-                      foregroundColor: Colors.green.shade700,
-                      side: BorderSide(color: Colors.green.shade400, width: 2),
+                      backgroundColor: _primaryContainer,
+                      foregroundColor: _primary,
+                      side: BorderSide(color: _primary, width: 2),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -681,10 +666,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.green.withOpacity(0.1), width: 1),
+        border: Border.all(color: _primary.withOpacity(0.1), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.08),
+            color: _primary.withOpacity(0.08),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -714,11 +699,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         gradient: LinearGradient(
-                          colors: [Colors.green.shade50, Colors.green.shade100],
+                          colors: [_primaryContainer, _colors.surface],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.green.withOpacity(0.25),
+                            color: _primary.withOpacity(0.25),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -745,12 +730,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade600,
+                            color: _primary,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.green.withOpacity(0.4),
+                                color: _primary.withOpacity(0.4),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -795,15 +780,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                               ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [
-                                    Colors.green.shade400,
-                                    Colors.green.shade600,
-                                  ],
+                                  colors: [_primary, _secondary],
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.green.withOpacity(0.3),
+                                    color: _primary.withOpacity(0.3),
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),
@@ -838,10 +820,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.green.shade50,
+                          color: _primaryContainer,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Colors.green.shade200,
+                            color: _colors.outlineVariant,
                             width: 1,
                           ),
                         ),
@@ -851,7 +833,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                             Icon(
                               Icons.medical_services,
                               size: 14,
-                              color: Colors.green.shade700,
+                              color: _primary,
                             ),
                             const SizedBox(width: 6),
                             Flexible(
@@ -859,7 +841,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                                 doctor.specialization ?? '',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.green.shade700,
+                                  color: _primary,
                                   fontWeight: FontWeight.w600,
                                 ),
                                 maxLines: 1,
@@ -944,13 +926,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
+                    color: _primaryContainer,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     Icons.arrow_forward_ios,
                     size: 14,
-                    color: Colors.green.shade600,
+                    color: _primary,
                   ),
                 ),
               ],
@@ -962,13 +944,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   }
 
   Widget _doctorPlaceholder() {
+    final lightShade =
+        Color.lerp(_primaryContainer, _primary, 0.2) ?? _primaryContainer;
+
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.green.shade100, Colors.green.shade200],
-        ),
+        gradient: LinearGradient(colors: [_primaryContainer, lightShade]),
       ),
-      child: Icon(Icons.person, size: 45, color: Colors.green.shade600),
+      child: Icon(Icons.person, size: 45, color: _primary),
     );
   }
 }

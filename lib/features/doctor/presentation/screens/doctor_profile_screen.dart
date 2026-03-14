@@ -17,6 +17,11 @@ class DoctorProfileScreen extends StatefulWidget {
 
 class _DoctorProfileScreenState extends State<DoctorProfileScreen>
     with SingleTickerProviderStateMixin {
+  ColorScheme get _colors => Theme.of(context).colorScheme;
+  Color get _primary => _colors.primary;
+  Color get _secondary => _colors.secondary;
+  Color get _primaryContainer => _colors.primaryContainer;
+
   late TabController _tabController;
   final DoctorRepository _doctorRepo = sl<DoctorRepository>();
 
@@ -64,14 +69,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   Widget build(BuildContext context) {
     final d = widget.doctor;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
           // ── App Bar with Doctor image ──
           SliverAppBar(
             expandedHeight: 280,
             pinned: true,
-            backgroundColor: Colors.green.shade700,
+            backgroundColor: _primary,
             leading: IconButton(
               icon: const CircleAvatar(
                 backgroundColor: Colors.white24,
@@ -83,7 +88,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.green.shade600, Colors.green.shade900],
+                    colors: [_primary, _secondary],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -165,9 +170,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
             delegate: _TabBarDelegate(
               TabBar(
                 controller: _tabController,
-                labelColor: Colors.green.shade700,
+                labelColor: _primary,
                 unselectedLabelColor: Colors.grey,
-                indicatorColor: Colors.green.shade700,
+                indicatorColor: _primary,
                 indicatorWeight: 3,
                 tabs: const [
                   Tab(text: 'About'),
@@ -258,21 +263,17 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.green.shade50, Colors.green.shade100],
+                colors: [_primaryContainer, _colors.surface],
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.green.shade200),
+              border: Border.all(color: _colors.outlineVariant),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.payments_outlined,
-                      color: Colors.green.shade700,
-                      size: 28,
-                    ),
+                    Icon(Icons.payments_outlined, color: _primary, size: 28),
                     const SizedBox(width: 12),
                     const Text(
                       'Consultation Fee',
@@ -288,7 +289,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
+                    color: _primary,
                   ),
                 ),
               ],
@@ -321,10 +322,10 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.green.shade50,
+              color: _primaryContainer,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, size: 18, color: Colors.green.shade700),
+            child: Icon(icon, size: 18, color: _primary),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -353,9 +354,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   // ── Reviews Tab ──
   Widget _buildReviewsTab() {
     if (_loadingExtras) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.green),
-      );
+      return Center(child: CircularProgressIndicator(color: _primary));
     }
     if (_reviews.isEmpty) {
       return Center(
@@ -392,13 +391,10 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CircleAvatar(
-          backgroundColor: Colors.green.shade100,
+          backgroundColor: _primaryContainer,
           child: Text(
             (r.patientName ?? 'A').substring(0, 1).toUpperCase(),
-            style: TextStyle(
-              color: Colors.green.shade700,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: _primary, fontWeight: FontWeight.bold),
           ),
         ),
         const SizedBox(width: 12),
@@ -456,9 +452,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   // ── Availability Tab ──
   Widget _buildAvailabilityTab() {
     if (_loadingExtras) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.green),
-      );
+      return Center(child: CircularProgressIndicator(color: _primary));
     }
     if (_schedules.isEmpty) {
       return Center(
@@ -503,14 +497,10 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: _primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.calendar_today,
-                  color: Colors.green.shade700,
-                  size: 24,
-                ),
+                child: Icon(Icons.calendar_today, color: _primary, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -541,7 +531,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: _primaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -549,7 +539,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Colors.green.shade700,
+                    color: _primary,
                   ),
                 ),
               ),
@@ -591,7 +581,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green.shade700,
+                      color: _primary,
                     ),
                   ),
                 ],
@@ -601,7 +591,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
               onPressed: () =>
                   context.push('/patient/doctor-profile/book', extra: d),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade600,
+                backgroundColor: _primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
@@ -640,7 +630,10 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Container(color: Colors.white, child: _tabBar);
+    return Container(
+      color: Theme.of(context).colorScheme.surface,
+      child: _tabBar,
+    );
   }
 
   @override

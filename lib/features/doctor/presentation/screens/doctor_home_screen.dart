@@ -16,6 +16,10 @@ class DoctorHomeScreen extends StatefulWidget {
 }
 
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _secondary => Theme.of(context).colorScheme.secondary;
+  Color get _primaryContainer => Theme.of(context).colorScheme.primaryContainer;
+
   @override
   void initState() {
     super.initState();
@@ -42,15 +46,13 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       builder: (context, state) {
         if (state is DoctorProfileLoading || state is DoctorProfileInitial) {
           return Scaffold(
-            backgroundColor: Colors.grey.shade50,
-            body: const Center(
-              child: CircularProgressIndicator(color: Colors.green),
-            ),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            body: Center(child: CircularProgressIndicator(color: _primary)),
           );
         }
         if (state is DoctorProfileError) {
           return Scaffold(
-            backgroundColor: Colors.grey.shade50,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: Center(child: Text('Error: ${state.message}')),
           );
         }
@@ -61,7 +63,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             : null;
         if (profile == null) {
           return Scaffold(
-            backgroundColor: Colors.grey.shade50,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: const Center(child: Text('Profile not found')),
           );
         }
@@ -71,8 +73,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   }
 
   Widget _buildScaffold(DoctorProfile p) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,8 +88,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             ),
           ],
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.green,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.primary,
         elevation: 0,
         actions: [
           IconButton(
@@ -136,14 +140,14 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.green.shade400, Colors.green.shade600],
+                  colors: [_primary, _secondary],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withOpacity(0.3),
+                    color: _primary.withOpacity(0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -170,7 +174,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                     backgroundColor: Colors.white,
                                     child: Icon(
                                       Icons.medical_services,
-                                      color: Colors.green.shade600,
+                                      color: _primary,
                                       size: 40,
                                     ),
                                   ),
@@ -180,7 +184,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                 backgroundColor: Colors.white,
                                 child: Icon(
                                   Icons.medical_services,
-                                  color: Colors.green.shade600,
+                                  color: _primary,
                                   size: 40,
                                 ),
                               ),
@@ -237,7 +241,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 12),
@@ -281,7 +285,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 12),
@@ -296,7 +300,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 12),
@@ -322,16 +326,16 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
+                  color: colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade100),
+                  border: Border.all(color: _primaryContainer),
                 ),
                 child: Text(
                   p.description!,
@@ -360,7 +364,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               'Manage Schedule',
               'Update your consultation hours and availability',
               Icons.schedule,
-              Colors.green,
+              _primary,
             ),
             const SizedBox(height: 12),
             _buildFeatureCard(
@@ -381,7 +385,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               'Edit Profile',
               'Update your professional information',
               Icons.edit,
-              Colors.purple,
+              _secondary,
               onTap: _navigateToEditProfile,
             ),
             const SizedBox(height: 30),
@@ -392,12 +396,14 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   }
 
   Widget _buildInfoCard(String label, String value, IconData icon) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.shade100),
+        border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -412,10 +418,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.green.shade50,
+              color: _primaryContainer,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: Colors.green, size: 24),
+            child: Icon(icon, color: _primary, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(

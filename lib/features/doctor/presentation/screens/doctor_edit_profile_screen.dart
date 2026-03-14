@@ -16,6 +16,12 @@ class DoctorEditProfileScreen extends StatefulWidget {
 }
 
 class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
+  ColorScheme get _colors => Theme.of(context).colorScheme;
+  Color get _primary => _colors.primary;
+  Color get _primaryContainer => _colors.primaryContainer;
+  Color get _surface => _colors.surface;
+  Color get _outline => _colors.outline;
+
   late TextEditingController _nameController;
   late TextEditingController _specializationController;
   late TextEditingController _degreeController;
@@ -143,9 +149,9 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Profile updated successfully!'),
-          backgroundColor: Colors.green,
+          backgroundColor: _primary,
         ),
       );
       Future.delayed(const Duration(seconds: 1), () {
@@ -169,9 +175,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
         if (profile == null) {
           return Scaffold(
             appBar: AppBar(title: const Text('Edit Profile')),
-            body: const Center(
-              child: CircularProgressIndicator(color: Colors.green),
-            ),
+            body: Center(child: CircularProgressIndicator(color: _primary)),
           );
         }
 
@@ -189,11 +193,11 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
 
   Widget _buildForm() {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Edit Profile'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: _surface,
+        foregroundColor: _colors.onSurface,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -216,8 +220,8 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
                       height: 120,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.green, width: 3),
-                        color: Colors.grey.shade100,
+                        border: Border.all(color: _primary, width: 3),
+                        color: _primaryContainer,
                       ),
                       child: _profileImagePath != null
                           ? ClipOval(
@@ -244,8 +248,8 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
                     icon: const Icon(Icons.camera_alt),
                     label: const Text('Change Photo'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.green,
-                      side: const BorderSide(color: Colors.green),
+                      foregroundColor: _primary,
+                      side: BorderSide(color: _primary),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -362,20 +366,20 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
                 hintText:
                     'Write about your experience, approach, and specialties...',
                 prefixIcon: const Icon(Icons.description),
-                prefixIconColor: Colors.green,
+                prefixIconColor: _primary,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: _outline),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.green, width: 2),
+                  borderSide: BorderSide(color: _primary, width: 2),
                 ),
                 filled: true,
-                fillColor: Colors.grey.shade50,
+                fillColor: _surface,
               ),
             ),
             const SizedBox(height: 32),
@@ -384,7 +388,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
             ElevatedButton(
               onPressed: _saveProfileChanges,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: _primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -412,8 +416,8 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
             OutlinedButton(
               onPressed: () => context.pop(),
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.green,
-                side: const BorderSide(color: Colors.green),
+                foregroundColor: _primary,
+                side: BorderSide(color: _primary),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -468,23 +472,21 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: Icon(icon),
-            prefixIconColor: Colors.green,
+            prefixIconColor: _primary,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: _outline),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.green, width: 2),
+              borderSide: BorderSide(color: _primary, width: 2),
             ),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: _surface,
           ),
         ),
       ],
     );
   }
 }
-
-

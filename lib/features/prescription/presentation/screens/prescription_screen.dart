@@ -18,6 +18,10 @@ class PrescriptionScreen extends StatefulWidget {
 }
 
 class _PrescriptionScreenState extends State<PrescriptionScreen> {
+  ColorScheme get _colors => Theme.of(context).colorScheme;
+  Color get _primary => _colors.primary;
+  Color get _primaryContainer => _colors.primaryContainer;
+
   final List<Map<String, String>> _medicines = [];
   final List<String> _tests = [];
   final _notesController = TextEditingController();
@@ -154,9 +158,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
               }
               Navigator.pop(ctx);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: _primary),
             child: const Text('Add', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -207,9 +209,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
               }
               Navigator.pop(ctx);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: _primary),
             child: const Text('Add', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -280,9 +280,9 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
         }
         if (state is PrescriptionSaved) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Prescription saved!'),
-              backgroundColor: Colors.green,
+              backgroundColor: _primary,
             ),
           );
         }
@@ -294,40 +294,35 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       },
       builder: (context, state) {
         return Scaffold(
-          backgroundColor: const Color(0xFFF5F5F5),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
             title: const Text('Prescription'),
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.green.shade700,
+            backgroundColor: _colors.surface,
+            foregroundColor: _primary,
             elevation: 0,
             actions: [
               if (state is PrescriptionSaving)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(16),
                   child: SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.green,
+                      color: _primary,
                     ),
                   ),
                 )
               else
                 TextButton.icon(
                   onPressed: _savePrescription,
-                  icon: Icon(Icons.save, color: Colors.green.shade700),
-                  label: Text(
-                    'Save',
-                    style: TextStyle(color: Colors.green.shade700),
-                  ),
+                  icon: Icon(Icons.save, color: _primary),
+                  label: Text('Save', style: TextStyle(color: _primary)),
                 ),
             ],
           ),
           body: state is PrescriptionLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.green),
-                )
+              ? Center(child: CircularProgressIndicator(color: _primary))
               : _buildBody(a),
         );
       },
@@ -362,8 +357,8 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                     children: [
                       CircleAvatar(
                         radius: 22,
-                        backgroundColor: Colors.blue.shade100,
-                        child: Icon(Icons.person, color: Colors.blue.shade700),
+                        backgroundColor: _primaryContainer,
+                        child: Icon(Icons.person, color: _primary),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -393,7 +388,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
+                          color: _primary,
                         ),
                       ),
                     ],
@@ -429,13 +424,13 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.green.shade50,
+                          color: _primaryContainer,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           Icons.medication,
                           size: 20,
-                          color: Colors.green.shade700,
+                          color: _primary,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -494,8 +489,8 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                       color: Colors.red.shade400,
                     ),
                     onDeleted: () => setState(() => _tests.removeAt(i)),
-                    backgroundColor: Colors.blue.shade50,
-                    side: BorderSide(color: Colors.blue.shade200),
+                    backgroundColor: _colors.secondaryContainer,
+                    side: BorderSide(color: _colors.outlineVariant),
                   );
                 }).toList(),
               ),
@@ -548,7 +543,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                       Switch(
                         value: _hasFollowUp,
                         onChanged: (v) => setState(() => _hasFollowUp = v),
-                        activeThumbColor: Colors.green.shade600,
+                        activeThumbColor: _primary,
                       ),
                     ],
                   ),
@@ -563,7 +558,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: _colors.surface,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -575,7 +570,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: _colors.surface,
                       ),
                       keyboardType: TextInputType.number,
                     ),
@@ -601,7 +596,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade600,
+                  backgroundColor: _primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -642,8 +637,8 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
         ),
         TextButton.icon(
           onPressed: onAdd,
-          icon: Icon(Icons.add, size: 18, color: Colors.green.shade700),
-          label: Text('Add', style: TextStyle(color: Colors.green.shade700)),
+          icon: Icon(Icons.add, size: 18, color: _primary),
+          label: Text('Add', style: TextStyle(color: _primary)),
         ),
       ],
     );
@@ -659,5 +654,3 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     );
   }
 }
-
-

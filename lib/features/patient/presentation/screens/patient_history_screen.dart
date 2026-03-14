@@ -16,6 +16,10 @@ class PatientHistoryScreen extends StatefulWidget {
 
 class _PatientHistoryScreenState extends State<PatientHistoryScreen>
     with SingleTickerProviderStateMixin {
+  ColorScheme get _colors => Theme.of(context).colorScheme;
+  Color get _primary => _colors.primary;
+  Color get _primaryContainer => _colors.primaryContainer;
+
   late TabController _tabController;
 
   @override
@@ -44,17 +48,17 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('My Appointments'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.green.shade700,
+        backgroundColor: _colors.surface,
+        foregroundColor: _primary,
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.green.shade700,
+          labelColor: _primary,
           unselectedLabelColor: Colors.grey,
-          indicatorColor: Colors.green.shade700,
+          indicatorColor: _primary,
           tabs: const [
             Tab(text: 'Upcoming'),
             Tab(text: 'Past'),
@@ -64,9 +68,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen>
       body: BlocBuilder<AppointmentsCubit, AppointmentsState>(
         builder: (context, state) {
           if (state is AppointmentsLoading || state is AppointmentsInitial) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.green),
-            );
+            return Center(child: CircularProgressIndicator(color: _primary));
           }
           if (state is AppointmentsError) {
             return Center(
@@ -210,8 +212,8 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen>
                   children: [
                     CircleAvatar(
                       radius: 22,
-                      backgroundColor: Colors.green.shade100,
-                      child: Icon(Icons.person, color: Colors.green.shade700),
+                      backgroundColor: _primaryContainer,
+                      child: Icon(Icons.person, color: _primary),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -263,7 +265,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen>
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green.shade700,
+                        color: _primary,
                       ),
                     ),
                   ],
@@ -345,8 +347,8 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen>
     Color fg;
     switch (status) {
       case 'confirmed':
-        bg = Colors.green.shade50;
-        fg = Colors.green.shade700;
+        bg = _primaryContainer;
+        fg = _primary;
         break;
       case 'completed':
         bg = Colors.blue.shade50;
@@ -384,4 +386,3 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen>
     );
   }
 }
-

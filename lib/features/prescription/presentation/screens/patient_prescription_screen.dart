@@ -23,6 +23,11 @@ class PatientPrescriptionScreen extends StatefulWidget {
 }
 
 class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
+  ColorScheme get _colors => Theme.of(context).colorScheme;
+  Color get _primary => _colors.primary;
+  Color get _secondary => _colors.secondary;
+  Color get _primaryContainer => _colors.primaryContainer;
+
   late Prescription _prescription;
 
   @override
@@ -44,10 +49,7 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Follow-up booked!'),
-          backgroundColor: Colors.green,
-        ),
+        SnackBar(content: Text('Follow-up booked!'), backgroundColor: _primary),
       );
     }
   }
@@ -269,15 +271,15 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
     final a = widget.appointment;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Prescription'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.green.shade700,
+        backgroundColor: _colors.surface,
+        foregroundColor: _primary,
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.print, color: Colors.green.shade700),
+            icon: Icon(Icons.print, color: _primary),
             tooltip: 'Download PDF',
             onPressed: _downloadPdf,
           ),
@@ -293,9 +295,7 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.green.shade600, Colors.green.shade800],
-                  ),
+                  gradient: LinearGradient(colors: [_primary, _secondary]),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -364,8 +364,8 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: Colors.blue.shade100,
-                      child: Icon(Icons.person, color: Colors.blue.shade700),
+                      backgroundColor: _primaryContainer,
+                      child: Icon(Icons.person, color: _primary),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -410,13 +410,13 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade50,
+                            color: _primaryContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.medication,
                             size: 20,
-                            color: Colors.green.shade700,
+                            color: _primary,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -458,8 +458,8 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
                       .map(
                         (t) => Chip(
                           label: Text(t),
-                          backgroundColor: Colors.blue.shade50,
-                          side: BorderSide(color: Colors.blue.shade200),
+                          backgroundColor: _colors.secondaryContainer,
+                          side: BorderSide(color: _colors.outlineVariant),
                         ),
                       )
                       .toList(),
@@ -555,16 +555,16 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade50,
+                            color: _primaryContainer,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.green.shade200),
+                            border: Border.all(color: _colors.outlineVariant),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
                                 Icons.check_circle,
-                                color: Colors.green.shade700,
+                                color: _primary,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
@@ -572,7 +572,7 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
                                 'Follow-up Booked',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.green.shade700,
+                                  color: _primary,
                                 ),
                               ),
                             ],
@@ -595,8 +595,8 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.green.shade700,
-                    side: BorderSide(color: Colors.green.shade600, width: 2),
+                    foregroundColor: _primary,
+                    side: BorderSide(color: _primary, width: 2),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -625,5 +625,3 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
     );
   }
 }
-
-
