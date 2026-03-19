@@ -6,6 +6,12 @@ import 'package:printing/printing.dart';
 import 'package:medihub/features/prescription/presentation/cubit/prescription_cubit.dart';
 import 'package:medihub/models/appointment.dart';
 import 'package:medihub/models/prescription.dart';
+import 'package:medihub/features/prescription/presentation/widgets/prescription_header.dart';
+import 'package:medihub/features/prescription/presentation/widgets/patient_info_card.dart';
+import 'package:medihub/features/prescription/presentation/widgets/medicines_list.dart';
+import 'package:medihub/features/prescription/presentation/widgets/diagnostic_tests_list.dart';
+import 'package:medihub/features/prescription/presentation/widgets/prescription_notes.dart';
+import 'package:medihub/features/prescription/presentation/widgets/follow_up_section.dart';
 
 class PatientPrescriptionScreen extends StatefulWidget {
   final Prescription prescription;
@@ -25,8 +31,6 @@ class PatientPrescriptionScreen extends StatefulWidget {
 class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
   ColorScheme get _colors => Theme.of(context).colorScheme;
   Color get _primary => _colors.primary;
-  Color get _secondary => _colors.secondary;
-  Color get _primaryContainer => _colors.primaryContainer;
 
   late Prescription _prescription;
 
@@ -292,298 +296,14 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [_primary, _secondary]),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.medical_services,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            p.doctorName ?? a.doctorName ?? 'Doctor',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            p.doctorSpecialization ?? a.specialization ?? '',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          a.selectedDay,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white70,
-                          ),
-                        ),
-                        Text(
-                          'Serial #${a.serialNumber}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              PrescriptionHeader(prescription: p, appointment: a),
               const SizedBox(height: 20),
-
-              // Patient info
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: _primaryContainer,
-                      child: Icon(Icons.person, color: _primary),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            p.patientName ?? a.patientName ?? 'Patient',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          if (p.patientMobile != null ||
-                              a.patientMobile != null)
-                            Text(
-                              p.patientMobile ?? a.patientMobile ?? '',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              PatientInfoCard(prescription: p, appointment: a),
               const SizedBox(height: 20),
-
-              // Medicines
-              if (p.medicines.isNotEmpty) ...[
-                _sectionTitle('Medicines'),
-                ...p.medicines.map(
-                  (m) => Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: _primaryContainer,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.medication,
-                            size: 20,
-                            color: _primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                m.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              if (m.dose.isNotEmpty || m.timing.isNotEmpty)
-                                Text(
-                                  '${m.dose}  ${m.timing}',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Tests
-              if (p.tests.isNotEmpty) ...[
-                _sectionTitle('Diagnostic Tests'),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: p.tests
-                      .map(
-                        (t) => Chip(
-                          label: Text(t),
-                          backgroundColor: _colors.secondaryContainer,
-                          side: BorderSide(color: _colors.outlineVariant),
-                        ),
-                      )
-                      .toList(),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Notes
-              if (p.notes != null && p.notes!.isNotEmpty) ...[
-                _sectionTitle('Notes'),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Text(
-                    p.notes!,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey.shade700,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Follow-up
-              if (p.hasFollowUp) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.orange.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.event_repeat,
-                            color: Colors.orange.shade700,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Follow-up Required',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade800,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (p.followUpDate != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Date: ${p.followUpDate}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ],
-                      if (p.followUpFee != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Fee: ৳${p.followUpFee}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      if (!p.followUpBooked)
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _bookFollowUp,
-                            icon: const Icon(Icons.calendar_today, size: 18),
-                            label: const Text('Book Follow-up'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange.shade600,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: _primaryContainer,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _colors.outlineVariant),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                color: _primary,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Follow-up Booked',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: _primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-
+              MedicinesList(medicines: p.medicines),
+              DiagnosticTestsList(tests: p.tests),
+              PrescriptionNotes(notes: p.notes),
+              FollowUpSection(prescription: p, onBookFollowUp: _bookFollowUp),
               const SizedBox(height: 24),
               // Download button
               SizedBox(
@@ -597,7 +317,10 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _primary,
-                    side: BorderSide(color: _primary, width: 2),
+                    side: BorderSide(
+                      color: _primary.withOpacity(0.5),
+                      width: 1,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -607,20 +330,6 @@ class _PatientPrescriptionScreenState extends State<PatientPrescriptionScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey.shade800,
         ),
       ),
     );
