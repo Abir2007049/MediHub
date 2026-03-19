@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../core/widgets/app_button.dart';
 import '../../../../../core/widgets/app_text_field.dart';
 
 class AuthOtpStep extends StatelessWidget {
@@ -56,11 +55,32 @@ class AuthOtpStep extends StatelessWidget {
           onSubmitted: (_) => onVerifyOtp(),
         ),
         const SizedBox(height: 32),
-        AppButton(
+        Semantics(
+          button: true,
+          enabled: !loading,
+          onTap: onVerifyOtp,
           label: 'Verify Code',
-          focusNode: submitButtonFocus,
-          onPressed: loading ? null : onVerifyOtp,
-          isLoading: loading,
+          child: FilledButton(
+            focusNode: submitButtonFocus,
+            onPressed: loading ? null : onVerifyOtp,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(double.infinity, 56),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text("Verify Code"),
+          ),
         ),
       ],
     );

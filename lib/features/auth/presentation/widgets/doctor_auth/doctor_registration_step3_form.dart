@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../core/widgets/app_button.dart';
 import '../../../../../core/widgets/app_text_field.dart';
 
 class DoctorRegistrationStep3Form extends StatelessWidget {
@@ -91,11 +90,32 @@ class DoctorRegistrationStep3Form extends StatelessWidget {
           onSubmitted: (_) => onSubmit(),
         ),
         const SizedBox(height: 32),
-        AppButton(
-          focusNode: submitButtonFocusNode,
+        Semantics(
+          button: true,
+          enabled: !loading,
+          onTap: onSubmit,
           label: 'Complete Registration',
-          onPressed: loading ? null : onSubmit,
-          isLoading: loading,
+          child: FilledButton(
+            focusNode: submitButtonFocusNode,
+            onPressed: loading ? null : onSubmit,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(double.infinity, 56),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text("Complete Registration"),
+          ),
         ),
       ],
     );

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -287,6 +289,7 @@ class _DoctorAuthScreenState extends State<DoctorAuthScreen> {
         if (mounted) setState(() => _errorMessage = e.message);
         _announceFeedback('Error: ${e.message}');
       } catch (e) {
+        log('Unknown error during registration', error: e);
         if (mounted) {
           setState(() => _errorMessage = 'Registration failed. Try again.');
         }
