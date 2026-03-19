@@ -226,13 +226,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                             colors: [_primary, _secondary],
                           ),
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _primary.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: const Icon(
                           Icons.waving_hand,
@@ -273,13 +266,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _primary.withOpacity(0.1),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
                     ),
                     child: TextField(
                       onChanged: (val) => setState(() => _searchQuery = val),
@@ -397,15 +383,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           color: isSelected ? _primary : Colors.grey.shade200,
                           width: isSelected ? 2 : 1,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isSelected
-                                ? _primary.withOpacity(0.4)
-                                : Colors.black.withOpacity(0.05),
-                            blurRadius: isSelected ? 12 : 6,
-                            offset: Offset(0, isSelected ? 4 : 2),
-                          ),
-                        ],
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -613,13 +590,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withOpacity(0.2), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -667,18 +637,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _primary.withOpacity(0.1), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: _primary.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -701,13 +659,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         gradient: LinearGradient(
                           colors: [_primaryContainer, _colors.surface],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _primary.withOpacity(0.25),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
@@ -733,13 +684,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                             color: _primary,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _primary.withOpacity(0.4),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
                           ),
                           child: const Icon(
                             Icons.check,
@@ -783,13 +727,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                                   colors: [_primary, _secondary],
                                 ),
                                 borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _primary.withOpacity(0.3),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
                               ),
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,

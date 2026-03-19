@@ -273,86 +273,84 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Header Logo
-                Semantics(
-                  image: true,
-                  label: 'MediHub logo',
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    child: Icon(
-                      Icons.local_hospital,
-                      size: 40,
-                      color: colorScheme.onPrimary,
-                    ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Header Logo
+              Semantics(
+                image: true,
+                label: 'MediHub logo',
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary,
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: Icon(
+                    Icons.local_hospital,
+                    size: 40,
+                    color: colorScheme.onPrimary,
                   ),
                 ),
-                const SizedBox(height: 24),
+              ),
+              const SizedBox(height: 24),
 
-                Semantics(
-                  header: true,
-                  child: Text('Patient Sign In', style: textTheme.displaySmall),
-                ),
-                const SizedBox(height: 16),
+              Semantics(
+                header: true,
+                child: Text('Patient Sign In', style: textTheme.displaySmall),
+              ),
+              const SizedBox(height: 16),
 
-                // Step Indicator
-                AppStepIndicator(
-                  currentStep: _step + 1,
-                  totalSteps: 3,
+              // Step Indicator
+              AppStepIndicator(
+                currentStep: _step + 1,
+                totalSteps: 3,
+                colorScheme: colorScheme,
+              ),
+              const SizedBox(height: 40),
+
+              // Error Message
+              if (_errorMessage.isNotEmpty)
+                AppErrorBanner(
+                  message: _errorMessage,
                   colorScheme: colorScheme,
                 ),
-                const SizedBox(height: 40),
+              if (_errorMessage.isNotEmpty) const SizedBox(height: 24),
 
-                // Error Message
-                if (_errorMessage.isNotEmpty)
-                  AppErrorBanner(
-                    message: _errorMessage,
-                    colorScheme: colorScheme,
-                  ),
-                if (_errorMessage.isNotEmpty) const SizedBox(height: 24),
-
-                // Step Forms
-                if (_step == 0)
-                  AuthPhoneStep(
-                    phoneFocusNode: _phoneFocusNode,
-                    submitButtonFocus: _submitButtonFocus,
-                    phoneController: _phoneController,
-                    loading: _loading,
-                    onSendOtp: _sendOtp,
-                    textTheme: textTheme,
-                  ),
-                if (_step == 1)
-                  AuthOtpStep(
-                    otpFocusNode: _otpFocusNode,
-                    submitButtonFocus: _submitButtonFocus,
-                    otpController: _otpController,
-                    formattedPhone: _formattedPhone,
-                    loading: _loading,
-                    onVerifyOtp: _verifyOtp,
-                    textTheme: textTheme,
-                  ),
-                if (_step == 2)
-                  AuthNameStep(
-                    nameFocusNode: _nameFocusNode,
-                    submitButtonFocus: _submitButtonFocus,
-                    nameController: _nameController,
-                    loading: _loading,
-                    onSaveProfile: _saveProfile,
-                    textTheme: textTheme,
-                  ),
-              ],
-            ),
+              // Step Forms
+              if (_step == 0)
+                AuthPhoneStep(
+                  phoneFocusNode: _phoneFocusNode,
+                  submitButtonFocus: _submitButtonFocus,
+                  phoneController: _phoneController,
+                  loading: _loading,
+                  onSendOtp: _sendOtp,
+                  textTheme: textTheme,
+                ),
+              if (_step == 1)
+                AuthOtpStep(
+                  otpFocusNode: _otpFocusNode,
+                  submitButtonFocus: _submitButtonFocus,
+                  otpController: _otpController,
+                  formattedPhone: _formattedPhone,
+                  loading: _loading,
+                  onVerifyOtp: _verifyOtp,
+                  textTheme: textTheme,
+                ),
+              if (_step == 2)
+                AuthNameStep(
+                  nameFocusNode: _nameFocusNode,
+                  submitButtonFocus: _submitButtonFocus,
+                  nameController: _nameController,
+                  loading: _loading,
+                  onSaveProfile: _saveProfile,
+                  textTheme: textTheme,
+                ),
+            ],
           ),
         ),
       ),

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/semantics.dart';
-import 'package:flutter/services.dart';
 import 'package:medihub/core/di/service_locator.dart';
-import 'package:medihub/core/widgets/app_button.dart';
 import 'package:medihub/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:medihub/features/auth/data/services/supabase_auth_service.dart';
 
@@ -28,7 +26,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     _checkExistingSession();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      SemanticsService.announce(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
         'Welcome to MediHub. Choose to continue as a doctor or patient.',
         TextDirection.ltr,
       );
