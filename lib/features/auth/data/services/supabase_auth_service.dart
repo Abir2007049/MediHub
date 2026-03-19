@@ -22,10 +22,15 @@ class SupabaseAuthService {
 
   /// Send OTP to a phone number. Phone must be in E.164 format (+880...).
   Future<void> sendOtp({required String phone}) async {
-    await _client.auth.signInWithOtp(phone: phone).catchError((error) {
-      log('Error sending OTP: ${error.message}', error: error);
-      throw error;
-    });
+    await _client.auth
+        .signInWithOtp(
+          phone: phone,
+          emailRedirectTo: 'com.example.medihub://login-callback/doctor/auth',
+        )
+        .catchError((error) {
+          log('Error sending OTP: ${error.message}', error: error);
+          throw error;
+        });
   }
 
   /// Verify the OTP code. Returns the auth response.
@@ -88,9 +93,14 @@ class SupabaseAuthService {
       email: email,
       password: password,
       data: {'role': 'doctor'},
+      emailRedirectTo: 'com.example.medihub://login-callback/doctor/auth',
     );
 
-    if (response.user != null) {
+    if (response.user != null && response.session != null) {
+      // Force the client to use the newly created session immediately
+      // so RLS policies evaluating auth.uid() will pass.
+      await _client.auth.setSession(response.session!.refreshToken!);
+
       await createDoctorProfile(
         userId: response.user!.id,
         fullName: name,

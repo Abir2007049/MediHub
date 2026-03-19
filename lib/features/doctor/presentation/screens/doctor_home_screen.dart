@@ -37,7 +37,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     try {
       await sl<SupabaseAuthService>().signOut();
     } catch (_) {}
-    if (mounted) context.go('/doctor-auth');
+    if (mounted) context.go('/doctor/auth');
   }
 
   @override

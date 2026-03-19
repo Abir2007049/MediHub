@@ -144,11 +144,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 Semantics(
                   button: true,
                   enabled: true,
-                  onTap: () => context.push('/doctor-auth'),
+                  onTap: () => context.push('/doctor/auth'),
                   label: 'Continue as Doctor',
                   tooltip: 'Sign in or register as a healthcare professional',
                   child: FilledButton.icon(
-                    onPressed: () => context.push('/doctor-auth'),
+                    onPressed: () => context.push('/doctor/auth'),
                     label: const Text('Continue as Doctor'),
                     icon: const Icon(Icons.badge),
                     style: FilledButton.styleFrom(
@@ -170,11 +170,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 Semantics(
                   button: true,
                   enabled: true,
-                  onTap: () => context.push('/auth'),
+                  onTap: () => context.push('/patient/auth'),
                   label: 'Continue as Patient',
                   tooltip: 'Book appointments with doctors',
                   child: OutlinedButton.icon(
-                    onPressed: () => context.push('/auth'),
+                    onPressed: () => context.push('/patient/auth'),
                     label: const Text('Continue as Patient'),
                     icon: const Icon(Icons.person),
                     style: OutlinedButton.styleFrom(

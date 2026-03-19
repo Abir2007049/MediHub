@@ -17,7 +17,13 @@ import 'features/prescription/presentation/cubit/prescription_cubit.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(url: Env.supabaseUrl, anonKey: Env.supabaseKey);
+  await Supabase.initialize(
+    url: Env.supabaseUrl,
+    anonKey: Env.supabaseKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce, // required
+    ),
+  );
   await setupServiceLocator();
   await sl<LocalNotificationService>().initialize();
 

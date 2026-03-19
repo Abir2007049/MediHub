@@ -10,7 +10,7 @@ class PatientDrawer extends StatelessWidget {
 
   Future<void> _clearPatientSession(BuildContext context) async {
     await sl<SupabaseAuthService>().signOut();
-    if (context.mounted) context.go('/auth');
+    if (context.mounted) context.go('/patient/auth');
   }
 
   @override
