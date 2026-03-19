@@ -36,7 +36,7 @@ class AppTextField extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     const noBorder = OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
-      borderSide: BorderSide.none,
+      // borderSide: BorderSide.none,
     );
 
     return TextField(

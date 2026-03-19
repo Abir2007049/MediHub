@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../core/widgets/app_button.dart';
-import '../../../../../core/widgets/app_text_field.dart';
+import 'package:medihub/core/widgets/app_button.dart';
+import 'package:medihub/core/widgets/app_text_field.dart';
 
 class AuthPhoneStep extends StatelessWidget {
   const AuthPhoneStep({

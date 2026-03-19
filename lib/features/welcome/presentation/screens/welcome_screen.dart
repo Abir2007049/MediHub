@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:medihub/core/di/service_locator.dart';
+import 'package:medihub/core/widgets/app_button.dart';
 import 'package:medihub/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:medihub/features/auth/data/services/supabase_auth_service.dart';
 
@@ -91,13 +92,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(32),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colorScheme.primary.withOpacity(0.25),
-                          blurRadius: 24,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
                     ),
                     child: Icon(
                       Icons.local_hospital,
@@ -154,72 +148,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   onTap: () => context.push('/doctor-auth'),
                   label: 'Continue as Doctor',
                   tooltip: 'Sign in or register as a healthcare professional',
-                  child: Focus(
-                    focusNode: _doctorButtonFocus,
-                    onKey: (node, event) {
-                      if (event.logicalKey == LogicalKeyboardKey.enter ||
-                          event.logicalKey == LogicalKeyboardKey.space) {
-                        context.push('/doctor-auth');
-                        return KeyEventResult.handled;
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: GestureDetector(
-                      onTap: () => context.push('/doctor-auth'),
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: Builder(
-                          builder: (context) {
-                            final isFocused = Focus.of(context).hasFocus;
-                            return Container(
-                              width: double.infinity,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    colorScheme.primary,
-                                    colorScheme.secondary,
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                border: isFocused
-                                    ? Border.all(
-                                        color: colorScheme.primary,
-                                        width: 3,
-                                      )
-                                    : null,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: colorScheme.primary.withOpacity(0.3),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.badge,
-                                    color: colorScheme.onPrimary,
-                                    size: 28,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Text(
-                                    'Continue as Doctor',
-                                    style: textTheme.labelLarge?.copyWith(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                  child: FilledButton.icon(
+                    onPressed: () => context.push('/doctor-auth'),
+                    label: const Text('Continue as Doctor'),
+                    icon: const Icon(Icons.badge),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 64),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      textStyle: textTheme.labelLarge?.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      iconSize: 28,
                     ),
                   ),
                 ),
@@ -232,66 +174,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   onTap: () => context.push('/auth'),
                   label: 'Continue as Patient',
                   tooltip: 'Book appointments with doctors',
-                  child: Focus(
-                    focusNode: _patientButtonFocus,
-                    onKey: (node, event) {
-                      if (event.logicalKey == LogicalKeyboardKey.enter ||
-                          event.logicalKey == LogicalKeyboardKey.space) {
-                        context.push('/auth');
-                        return KeyEventResult.handled;
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: GestureDetector(
-                      onTap: () => context.push('/auth'),
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: Builder(
-                          builder: (context) {
-                            final isFocused = Focus.of(context).hasFocus;
-                            return Container(
-                              width: double.infinity,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                color: colorScheme.surface,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: isFocused
-                                      ? colorScheme.primary
-                                      : colorScheme.primary.withOpacity(0.5),
-                                  width: isFocused ? 3 : 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: colorScheme.primary.withOpacity(0.1),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.person,
-                                    color: colorScheme.primary,
-                                    size: 28,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Text(
-                                    'Continue as Patient',
-                                    style: textTheme.labelLarge?.copyWith(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: colorScheme.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/auth'),
+                    label: const Text('Continue as Patient'),
+                    icon: const Icon(Icons.person),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 64),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      textStyle: textTheme.labelLarge?.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      side: BorderSide(color: colorScheme.primary, width: 2),
+                      iconSize: 28,
                     ),
                   ),
                 ),
