@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Centralized Supabase auth + profile helper for MediHub.
@@ -20,7 +22,10 @@ class SupabaseAuthService {
 
   /// Send OTP to a phone number. Phone must be in E.164 format (+880...).
   Future<void> sendOtp({required String phone}) async {
-    await _client.auth.signInWithOtp(phone: phone);
+    await _client.auth.signInWithOtp(phone: phone).catchError((error) {
+      log('Error sending OTP: ${error.message}', error: error);
+      throw error;
+    });
   }
 
   /// Verify the OTP code. Returns the auth response.

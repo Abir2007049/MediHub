@@ -57,11 +57,34 @@ class AuthPhoneStep extends StatelessWidget {
           onSubmitted: (_) => onSendOtp(),
         ),
         const SizedBox(height: 32),
-        AppButton(
+
+        Semantics(
+          button: true,
+          enabled: true,
+          onTap: loading ? null : onSendOtp,
           label: 'Send Verification Code',
-          focusNode: submitButtonFocus,
-          onPressed: loading ? null : onSendOtp,
-          isLoading: loading,
+          tooltip: 'Sign in or register as a healthcare professional',
+          child: FilledButton(
+            onPressed: loading ? null : onSendOtp,
+            focusNode: submitButtonFocus,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(double.infinity, 56),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: textTheme.labelLarge?.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Send Verification Code'),
+          ),
         ),
       ],
     );
