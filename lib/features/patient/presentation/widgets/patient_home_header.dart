@@ -5,16 +5,14 @@ class PatientHomeHeader extends StatelessWidget {
   final int doctorCount;
   final int specCount;
   final double averageRating;
-  final String searchQuery;
-  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onSearchTapped;
 
   const PatientHomeHeader({
     super.key,
     required this.doctorCount,
     required this.specCount,
     required this.averageRating,
-    required this.searchQuery,
-    required this.onSearchChanged,
+    required this.onSearchTapped,
   });
 
   @override
@@ -68,29 +66,24 @@ class PatientHomeHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: TextField(
-              onChanged: onSearchChanged,
-              decoration: InputDecoration(
-                hintText: 'Search doctors, specializations...',
-                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
-                prefixIcon: Icon(Icons.search, color: colorScheme.primary),
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear, color: Colors.grey.shade400),
-                        onPressed: () => onSearchChanged(''),
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
+          GestureDetector(
+            onTap: onSearchTapped,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search, color: colorScheme.primary),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Search doctors, specializations...',
+                    style: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+                  ),
+                ],
               ),
             ),
           ),

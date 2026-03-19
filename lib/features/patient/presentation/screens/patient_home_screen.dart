@@ -10,6 +10,7 @@ import 'package:medihub/features/patient/presentation/widgets/patient_home_heade
 import 'package:medihub/features/patient/presentation/widgets/category_selector.dart';
 import 'package:medihub/features/patient/presentation/widgets/location_filter_dropdown.dart';
 import 'package:medihub/features/patient/presentation/widgets/doctor_card.dart';
+import 'package:medihub/features/patient/presentation/widgets/doctor_search_delegate.dart';
 
 const Map<String, IconData> _categoryIcons = {
   'All': Icons.medical_services,
@@ -34,7 +35,6 @@ class PatientHomeScreen extends StatefulWidget {
 }
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
-  String _searchQuery = '';
   String _selectedLocation = 'All';
   String _selectedSpecialization = 'All';
   int _displayedDoctorCount = 4;
@@ -46,17 +46,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   }
 
   List<DoctorProfile> _filterDoctors(List<DoctorProfile> doctors) {
-    final query = _searchQuery.toLowerCase();
     return doctors.where((d) {
-      final matchesName =
-          d.fullName.toLowerCase().contains(query) ||
-          (d.specialization?.toLowerCase().contains(query) ?? false);
       final matchesSpec =
           _selectedSpecialization == 'All' ||
           d.specialization == _selectedSpecialization;
       final matchesLoc =
           _selectedLocation == 'All' || d.location == _selectedLocation;
-      return matchesName && matchesSpec && matchesLoc;
+      return matchesSpec && matchesLoc;
     }).toList();
   }
 
@@ -157,9 +153,15 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       doctorCount: doctorCount,
                       specCount: specCount,
                       averageRating: avgRating,
-                      searchQuery: _searchQuery,
-                      onSearchChanged: (val) =>
-                          setState(() => _searchQuery = val),
+                      onSearchTapped: () {
+                        showSearch(
+                          context: context,
+                          delegate: DoctorSearchDelegate(
+                            doctors: state.doctors,
+                            doctorRatings: state.doctorRatings,
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 24),
                     Padding(
