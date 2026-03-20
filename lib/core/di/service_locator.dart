@@ -41,7 +41,7 @@ Future<void> setupServiceLocator() async {
   }
 
   if (!sl.isRegistered<AuthCubit>()) {
-    sl.registerFactory<AuthCubit>(
+    sl.registerLazySingleton<AuthCubit>(
       () => AuthCubit(
         auth: sl<SupabaseAuthService>(),
         doctorRepo: sl<DoctorRepository>(),
@@ -59,7 +59,7 @@ Future<void> setupServiceLocator() async {
     sl.registerFactory<DoctorProfileCubit>(
       () => DoctorProfileCubit(
         repo: sl<DoctorRepository>(),
-        auth: sl<SupabaseAuthService>(),
+        authCubit: sl<AuthCubit>(),
       ),
     );
   }

@@ -1,20 +1,46 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/features/doctor/data/repositories/doctor_repository.dart';
-import 'package:medihub/features/auth/data/services/supabase_auth_service.dart';
+import 'package:medihub/features/auth/presentation/cubit/auth_cubit.dart';
+import 'package:medihub/features/auth/presentation/cubit/auth_state.dart';
 import 'doctor_profile_state.dart';
 
 class DoctorProfileCubit extends Cubit<DoctorProfileState> {
   final DoctorRepository _repo;
-  final SupabaseAuthService _auth;
+  final AuthCubit _authCubit;
+  late final StreamSubscription _authSub;
 
-  DoctorProfileCubit({DoctorRepository? repo, SupabaseAuthService? auth})
+  DoctorProfileCubit({DoctorRepository? repo, AuthCubit? authCubit})
     : _repo = repo ?? sl<DoctorRepository>(),
-      _auth = auth ?? sl<SupabaseAuthService>(),
-      super(DoctorProfileInitial());
+      _authCubit = authCubit ?? sl<AuthCubit>(),
+      super(DoctorProfileInitial()) {
+    _syncWithAuthState(_authCubit.state);
+    _authSub = _authCubit.stream.listen(_syncWithAuthState);
+  }
+
+  void _syncWithAuthState(AuthState authState) {
+    if (authState is AuthenticatedAsDoctor) {
+      emit(DoctorProfileLoaded(authState.profile));
+    } else if (authState is AuthUnauthenticated) {
+      emit(DoctorProfileInitial());
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _authSub.cancel();
+    return super.close();
+  }
 
   Future<void> loadProfile([String? userId]) async {
-    final id = userId ?? _auth.currentUser?.id;
+    final currentState = _authCubit.state;
+    if (userId == null && currentState is AuthenticatedAsDoctor) {
+      emit(DoctorProfileLoaded(currentState.profile));
+      return;
+    }
+
+    final id = userId ?? _authCubit.currentUserId;
     if (id == null) {
       emit(DoctorProfileError('Not logged in'));
       return;
@@ -34,7 +60,7 @@ class DoctorProfileCubit extends Cubit<DoctorProfileState> {
 
   Future<void> updateProfile(Map<String, dynamic> data) async {
     final currentState = state;
-    final userId = _auth.currentUser?.id;
+    final userId = _authCubit.currentUserId;
     if (userId == null) {
       emit(DoctorProfileError('Not logged in'));
       return;
@@ -42,12 +68,14 @@ class DoctorProfileCubit extends Cubit<DoctorProfileState> {
     emit(DoctorProfileSaving());
     try {
       final updated = await _repo.updateDoctorProfile(userId, data);
+
+      // Update AuthCubit state to keep the single source of truth in sync
+      _authCubit.setDoctorAuthenticated(updated);
+
       emit(DoctorProfileSaved(updated));
-      // Re-emit as loaded so widgets see the new profile
       emit(DoctorProfileLoaded(updated));
     } catch (e) {
       emit(DoctorProfileError(e.toString()));
-      // Restore previous state on error
       if (currentState is DoctorProfileLoaded) {
         emit(currentState);
       }

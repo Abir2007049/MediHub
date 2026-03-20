@@ -70,7 +70,9 @@ class _DoctorSigninScreenState extends State<DoctorSigninScreen> {
 
   Future<void> _exchange(Uri uri) async {
     try {
-      await Supabase.instance.client.auth.getSessionFromUrl(uri);
+      final response = await Supabase.instance.client.auth.getSessionFromUrl(
+        uri,
+      );
       if (mounted) {
         await context.read<AuthCubit>().checkSession();
       }

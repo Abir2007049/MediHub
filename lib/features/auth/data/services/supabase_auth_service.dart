@@ -92,7 +92,19 @@ class SupabaseAuthService {
     final response = await _client.auth.signUp(
       email: email,
       password: password,
-      data: {'role': 'doctor'},
+      phone: phone,
+      data: {
+        'role': 'doctor',
+        'full_name': name,
+        'phone': phone,
+        'nid': nid,
+        'license': licenseNumber,
+        'specialization': specialization,
+        'hospital': hospital,
+        'department': department,
+        'degree': degree,
+        'medical_college': medicalCollege,
+      },
       emailRedirectTo: 'com.example.medihub://login-callback/doctor/auth',
     );
 
@@ -138,6 +150,29 @@ class SupabaseAuthService {
         .eq('id', userId)
         .maybeSingle();
     return data;
+  }
+
+  /// Create doctor profile from user metadata if it doesn't exist.
+  Future<void> createDoctorProfileFromMetadata(User user) async {
+    final metadata = user.userMetadata;
+    if (metadata == null || metadata['role'] != 'doctor') return;
+
+    final existing = await getDoctorProfile(user.id);
+    if (existing != null) return;
+
+    await createDoctorProfile(
+      userId: user.id,
+      fullName: metadata['full_name'] ?? '',
+      email: user.email ?? '',
+      phone: metadata['phone'],
+      nid: metadata['nid'],
+      license: metadata['license'],
+      specialization: metadata['specialization'],
+      hospital: metadata['hospital'],
+      department: metadata['department'],
+      degree: metadata['degree'],
+      medicalCollege: metadata['medical_college'],
+    );
   }
 
   /// Insert doctor profile row after signup.

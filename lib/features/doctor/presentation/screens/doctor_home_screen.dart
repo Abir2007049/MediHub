@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:medihub/core/di/service_locator.dart';
 import 'package:medihub/features/doctor/presentation/cubit/doctor_profile_cubit.dart';
 import 'package:medihub/features/doctor/presentation/cubit/doctor_profile_state.dart';
+import 'package:medihub/features/doctor/presentation/widgets/info_card.dart';
+import 'package:medihub/features/doctor/presentation/widgets/feature_card.dart';
 import 'package:medihub/models/doctor_profile.dart';
 import 'package:medihub/features/auth/data/services/supabase_auth_service.dart';
 
@@ -23,14 +25,12 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<DoctorProfileCubit>().loadProfile();
+    // Profile is loaded automatically via DoctorProfileCubit listening to AuthCubit
   }
 
   Future<void> _navigateToEditProfile() async {
-    final result = await context.push<bool>('/doctor/edit-profile');
-    if (result == true) {
-      if (mounted) context.read<DoctorProfileCubit>().loadProfile();
-    }
+    await context.push<bool>('/doctor/edit-profile');
+    // Profile updates are automatically synced through AuthCubit
   }
 
   Future<void> _handleLogout() async {
@@ -215,7 +215,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withAlpha(51),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -238,37 +238,45 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildInfoCard(
-              'Specialization',
-              p.specialization ?? '',
-              Icons.healing,
+            InfoCard(
+              label: 'Specialization',
+              value: p.specialization ?? '',
+              icon: Icons.healing,
             ),
             const SizedBox(height: 12),
-            _buildInfoCard('Degree', p.degree ?? '', Icons.school),
+            InfoCard(
+              label: 'Degree',
+              value: p.degree ?? '',
+              icon: Icons.school,
+            ),
             const SizedBox(height: 12),
             if ((p.license ?? '').isNotEmpty)
-              _buildInfoCard(
-                'License Number',
-                p.license!,
-                Icons.card_membership,
+              InfoCard(
+                label: 'License Number',
+                value: p.license!,
+                icon: Icons.card_membership,
               ),
             if ((p.license ?? '').isNotEmpty) const SizedBox(height: 12),
-            _buildInfoCard(
-              'Medical College',
-              p.medicalCollege ?? '',
-              Icons.apartment,
+            InfoCard(
+              label: 'Medical College',
+              value: p.medicalCollege ?? '',
+              icon: Icons.apartment,
             ),
             if ((p.hospital ?? '').isNotEmpty) ...[
               const SizedBox(height: 12),
-              _buildInfoCard(
-                'Current Hospital',
-                p.hospital!,
-                Icons.local_hospital,
+              InfoCard(
+                label: 'Current Hospital',
+                value: p.hospital!,
+                icon: Icons.local_hospital,
               ),
             ],
             if ((p.department ?? '').isNotEmpty) ...[
               const SizedBox(height: 12),
-              _buildInfoCard('Department', p.department!, Icons.domain),
+              InfoCard(
+                label: 'Department',
+                value: p.department!,
+                icon: Icons.domain,
+              ),
             ],
             const SizedBox(height: 24),
 
@@ -282,9 +290,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildInfoCard('Email', p.email, Icons.email),
+            InfoCard(label: 'Email', value: p.email, icon: Icons.email),
             const SizedBox(height: 12),
-            _buildInfoCard('Phone', p.phone ?? '', Icons.phone),
+            InfoCard(label: 'Phone', value: p.phone ?? '', icon: Icons.phone),
             const SizedBox(height: 24),
 
             // Additional Information
@@ -297,18 +305,22 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildInfoCard(
-              'Diagnostic Centre',
-              p.diagnostic,
-              Icons.local_hospital,
+            InfoCard(
+              label: 'Diagnostic Centre',
+              value: p.diagnostic,
+              icon: Icons.local_hospital,
             ),
             const SizedBox(height: 12),
-            _buildInfoCard('Location', p.location, Icons.location_on),
+            InfoCard(
+              label: 'Location',
+              value: p.location,
+              icon: Icons.location_on,
+            ),
             const SizedBox(height: 12),
-            _buildInfoCard(
-              'Consultation Fee',
-              '৳${p.consultationFee}/appointment',
-              Icons.attach_money,
+            InfoCard(
+              label: 'Consultation Fee',
+              value: '৳${p.consultationFee}/appointment',
+              icon: Icons.attach_money,
             ),
             const SizedBox(height: 24),
 
@@ -353,137 +365,35 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildFeatureCard(
-              'Manage Schedule',
-              'Update your consultation hours and availability',
-              Icons.schedule,
-              _primary,
+            FeatureCard(
+              title: 'Manage Schedule',
+              description: 'Update your consultation hours and availability',
+              icon: Icons.schedule,
+              color: _primary,
             ),
             const SizedBox(height: 12),
-            _buildFeatureCard(
-              'View Appointments',
-              'Check upcoming appointments and patient details',
-              Icons.event_note,
-              Colors.blue,
+            FeatureCard(
+              title: 'View Appointments',
+              description: 'Check upcoming appointments and patient details',
+              icon: Icons.event_note,
+              color: Colors.blue,
             ),
             const SizedBox(height: 12),
-            _buildFeatureCard(
-              'Patient Reviews',
-              'Monitor ratings and feedback from patients',
-              Icons.star,
-              Colors.amber,
+            FeatureCard(
+              title: 'Patient Reviews',
+              description: 'Monitor ratings and feedback from patients',
+              icon: Icons.star,
+              color: Colors.amber,
             ),
             const SizedBox(height: 12),
-            _buildFeatureCard(
-              'Edit Profile',
-              'Update your professional information',
-              Icons.edit,
-              _secondary,
+            FeatureCard(
+              title: 'Edit Profile',
+              description: 'Update your professional information',
+              icon: Icons.edit,
+              color: _secondary,
               onTap: _navigateToEditProfile,
             ),
             const SizedBox(height: 30),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(String label, String value, IconData icon) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: _primaryContainer,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: _primary, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureCard(
-    String title,
-    String description,
-    IconData icon,
-    Color color, {
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.arrow_forward, color: color, size: 20),
           ],
         ),
       ),
